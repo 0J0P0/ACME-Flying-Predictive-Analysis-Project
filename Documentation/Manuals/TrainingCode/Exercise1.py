@@ -10,7 +10,7 @@ sc = SparkConf()\
 def process(sc):
     spark = SparkSession.builder.config(conf=sc).getOrCreate()
 
-    df = spark.read.csv('resources/bank.csv', header=True)
+    df = spark.read.csv('resources/bank.csv', header=True, sep=";", quote="\"", escape="\"")
     # df.show()
 
     df.createOrReplaceTempView("bank")
