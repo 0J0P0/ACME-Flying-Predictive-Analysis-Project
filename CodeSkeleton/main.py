@@ -24,15 +24,14 @@ if __name__== "__main__":
     conf.set("spark.jars", JDBC_JAR)
 
     # Initialize a Spark session
-    spark = SparkSession.builder \
-    .config(conf=conf).getOrCreate()
+    spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
     # Create and point to your pipelines here
     sensor_data = extract_sensor_data('resources/trainingData/', spark)
 
     print(type(sensor_data))
 
-    sensor_data.show()
+    # sensor_data.show()
 
     spark.stop()
 
