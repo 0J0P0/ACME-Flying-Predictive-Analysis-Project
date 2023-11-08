@@ -8,8 +8,8 @@ from management_pipeline import extract_sensor_data
 
 HADOOP_HOME = "./resources/hadoop_home"
 JDBC_JAR = "./resources/postgresql-42.2.8.jar"
-PYSPARK_PYTHON = "python3.6"
-PYSPARK_DRIVER_PYTHON = "python3.6"
+PYSPARK_PYTHON = "python3.11"
+PYSPARK_DRIVER_PYTHON = "python3.11"
 
 
 if __name__== "__main__":
@@ -32,8 +32,6 @@ if __name__== "__main__":
     print(type(sensor_data))
 
     # sensor_data.show()
-
-    spark.stop()
 
 
 
