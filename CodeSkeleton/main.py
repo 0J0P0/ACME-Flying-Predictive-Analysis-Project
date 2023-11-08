@@ -3,7 +3,7 @@ import sys
 import pyspark
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
-from management_pipeline import extract_sensor_data
+from management_pipeline import managment_pipe
 
 
 HADOOP_HOME = "./resources/hadoop_home"
@@ -27,11 +27,11 @@ if __name__== "__main__":
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
     # Create and point to your pipelines here
-    sensor_data = extract_sensor_data('resources/trainingData/', spark)
+    db_properties = {"driver": "org.postgresql.Driver",
+                 "url": "jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require",
+                 "user": "juan.pablo.zaldivar",
+                 "password": "DB021202"}
+    
+    path = "./resources/trainingData/"
 
-    print(type(sensor_data))
-
-    # sensor_data.show()
-
-
-
+    kpis = managment_pipe(path, spark, db_properties)

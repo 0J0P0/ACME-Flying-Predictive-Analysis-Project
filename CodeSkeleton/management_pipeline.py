@@ -14,6 +14,21 @@ from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg
 
+def extract_dw_data(spark: SparkSession, db_properties: dict):
+    """
+
+    """
+
+    data = spark.read.jdbc(url=db_properties["url"],
+                           table="oldinstance.operationinterruption",
+                           properties=db_properties)
+
+    df = data.select("flightid","airport","duration")
+    df.show()
+
+    return df
+
+
 def extract_sensor_data(filepath: str, spark: SparkSession):
     """
 
@@ -21,7 +36,6 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
 
     sensor_data = {}
     files = os.listdir(filepath)
-    print('-'*50 + '\n' + f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
 
     for filename in files:
         if filename.endswith(".csv"):
@@ -30,15 +44,11 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
 
             df = spark.read.csv(filepath + filename, sep=';')
     
-            # if aircraft_day == 'XY-SFN_250515':
-            #     print(df.columns)
             if aircraft_day not in sensor_data:
                 sensor_data[aircraft_day] = df
             else:
                 sensor_data[aircraft_day] = sensor_data[aircraft_day].union(df)
     
-    print(f'{Fore.GREEN}Sensor data extracted from {len(files)} files{Fore.RESET}' + '\n' + '-'*50)
-
     rows = []
     for aircraft_day, df in sensor_data.items():
         avg_sensor = df.select(avg(df['_c2'])).collect()[0][0]
@@ -53,4 +63,14 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     return sensor_data_df
 
 
-    
+def managment_pipe(filepath: str, spark: SparkSession, db_properties: dict):
+    """
+
+    """
+
+    print('-'*50 + '\n' + f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
+    # sensor_data_df = extract_sensor_data(filepath, spark)
+    print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
+    kpis = extract_dw_data(spark, db_properties)
+
+    return kpis
