@@ -12,19 +12,27 @@ from colorama import Fore
 from pyspark.sql import Row
 from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg
+from pyspark.sql.functions import avg, sum, agg
 
-def extract_dw_data(spark: SparkSession, db_properties: dict):
+def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     """
 
     """
 
-    data = spark.read.jdbc(url=db_properties["url"],
-                           table="oldinstance.operationinterruption",
-                           properties=db_properties)
+    data = spark.read.jdbc(url=dbw_properties["url"],
+                           table="public.aircraftutilization",
+                           properties=dbw_properties)
 
-    df = data.select("flightid","airport","duration")
+    df = data.select('aircraftid', 'timeid', 'flighthours','flightcycles','delayedminutes')
+    
+    df = data.groupBy('aircraftid', 'timeid').agg(
+        sum('flighthours'),
+        sum('flightcycles'),
+        sum('delayedminutes')
+    )
+
     df.show()
+    
 
     return df
 
@@ -63,7 +71,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     return sensor_data_df
 
 
-def managment_pipe(filepath: str, spark: SparkSession, db_properties: dict):
+def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict):
     """
 
     """
@@ -71,6 +79,6 @@ def managment_pipe(filepath: str, spark: SparkSession, db_properties: dict):
     print('-'*50 + '\n' + f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
     # sensor_data_df = extract_sensor_data(filepath, spark)
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
-    kpis = extract_dw_data(spark, db_properties)
+    kpis = extract_dw_data(spark, dbw_properties)
 
     return kpis

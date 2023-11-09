@@ -28,10 +28,8 @@ if __name__== "__main__":
 
     # Create and point to your pipelines here
     db_properties = {"driver": "org.postgresql.Driver",
-                 "url": "jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require",
+                 "url": "jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require",
                  "user": "juan.pablo.zaldivar",
                  "password": "DB021202"}
-    
-    path = "./resources/trainingData/"
 
-    kpis = managment_pipe(path, spark, db_properties)
+    kpis = managment_pipe('./resources/trainingData/', spark, db_properties)
