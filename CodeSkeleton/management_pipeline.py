@@ -112,6 +112,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
 
+    matrix = matrix.orderBy('aircraft id', 'day')
 
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
