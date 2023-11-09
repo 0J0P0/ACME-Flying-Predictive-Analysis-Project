@@ -12,7 +12,30 @@ from colorama import Fore
 from pyspark.sql import Row
 from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, sum, agg
+from pyspark.sql.functions import avg, sum, col, when, date_format, to_date, substring
+
+def extract_labels(spark: SparkSession, damos_properties: dict):
+    """
+
+    """
+
+    data = spark.read.jdbc(url=damos_properties["url"],
+                           table="oldinstance.operationinterruption",
+                           properties=damos_properties)
+
+    # data = flightid?
+    # una misma date puede tener varias labels
+    df = data.withColumn('date',
+                         date_format(to_date(substring('flightid', 1, 6), 'yyMMdd'),'yyyy-MM-dd'))
+
+    # igual comentar esto y hacerlo cuando se junte todo
+    df = df.groupBy('date', 'aircraftregistration', 'kind').agg(
+        when((col('kind') == 'Revision') | (col('kind') == 'Maintenance'), 'Maintenance')
+        .otherwise('No Maintenance').alias('label')
+    )
+
+    return df.select('aircraftregistration', 'date', 'label')
+
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     """
@@ -23,16 +46,11 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
                            table="public.aircraftutilization",
                            properties=dbw_properties)
 
-    df = data.select('aircraftid', 'timeid', 'flighthours','flightcycles','delayedminutes')
-    
     df = data.groupBy('aircraftid', 'timeid').agg(
-        sum('flighthours'),
-        sum('flightcycles'),
-        sum('delayedminutes')
-    )
-
-    df.show()
-    
+        sum('flighthours').alias('flighthours'),
+        sum('flightcycles').alias('flightcycles'),
+        sum('delayedminutes').alias('delayedminutes'),
+    ).orderBy('aircraftid', 'timeid')
 
     return df
 
@@ -68,17 +86,33 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     columns = ['aircraft id', 'day', 'avg_sensor']
     sensor_data_df = spark.createDataFrame(rows, columns)
 
+    # sort by aircraft id and day
+    sensor_data_df = sensor_data_df.orderBy('aircraft id', 'day')
+
     return sensor_data_df
 
 
-def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict):
+def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
     """
 
     """
 
-    print('-'*50 + '\n' + f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
-    # sensor_data_df = extract_sensor_data(filepath, spark)
+    print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
+
+    print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
+    sensor_data = extract_sensor_data(filepath, spark)
+
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
 
-    return kpis
+    print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
+    labels = extract_labels(spark, damos_properties)
+
+    matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
+
+    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
+
+
+    print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
+
+    return matrix

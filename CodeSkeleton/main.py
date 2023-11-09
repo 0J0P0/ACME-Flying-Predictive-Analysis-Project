@@ -27,9 +27,14 @@ if __name__== "__main__":
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
     # Create and point to your pipelines here
-    db_properties = {"driver": "org.postgresql.Driver",
+    dbw_properties = {"driver": "org.postgresql.Driver",
                  "url": "jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require",
                  "user": "juan.pablo.zaldivar",
                  "password": "DB021202"}
 
-    kpis = managment_pipe('./resources/trainingData/', spark, db_properties)
+    damos_properties = {"driver": "org.postgresql.Driver",
+                 "url": "jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require",
+                 "user": "juan.pablo.zaldivar",
+                 "password": "DB021202"}
+    
+    matrix = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
