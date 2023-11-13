@@ -1,6 +1,5 @@
 import os
 import sys
-import pyspark
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from management_pipeline import managment_pipe

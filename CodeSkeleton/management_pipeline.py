@@ -79,6 +79,8 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     return df
 
 
+from pyspark.sql.functions import avg
+
 def extract_sensor_data(filepath: str, spark: SparkSession):
     """
     Extracts the sensor data from the csv files and returns a DataFrame with the average measurement of the 3453 sensor per day.
@@ -95,37 +97,29 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     sensor_data_df : pyspark.sql.DataFrame
         DataFrame with the average measurement of the 3453 sensor per day.
     """
-
-    sensor_data = {}
+    
+    rows = []
     files = os.listdir(filepath)
-
+    
     for filename in files:
         if filename.endswith(".csv"):
             flight = filename.split('-')
-            aircraft_day = flight[4] + '-' + flight[5][:3] + '_' + flight[0]
-
+            aircraft, day = flight[4] + '-' + flight[5][:3], flight[0]
+            day = '20' + day[:2] + '-' + day[2:4] + '-' + day[4:]
+            
             df = spark.read.csv(filepath + filename, sep=';')
-    
-            if aircraft_day not in sensor_data:
-                sensor_data[aircraft_day] = df
-            else:
-                sensor_data[aircraft_day] = sensor_data[aircraft_day].union(df)
-    
-    rows = []
-    for aircraft_day, df in sensor_data.items():
-        avg_sensor = df.select(avg(df['_c2'])).collect()[0][0]
-        aircraft, day = aircraft_day.split('_')
-        day = '20' + day[:2] + '-' + day[2:4] + '-' + day[4:]
-        
-        rows.append((aircraft, day, avg_sensor))
+            avg_sensor = df.select(avg(df['_c2']).alias('avg_sensor')).collect()[0]['avg_sensor']
+            
+            rows.append((aircraft, day, avg_sensor))
 
     columns = ['aircraft id', 'day', 'avg_sensor']
     sensor_data_df = spark.createDataFrame(rows, columns)
+    
+    # Grouping by aircraft id and day, selecting the average sensor value
+    sensor_data_df = sensor_data_df.groupBy('aircraft id', 'day').agg({'avg_sensor': 'avg'})
+    sensor_data_df = sensor_data_df.withColumnRenamed('avg(avg_sensor)', 'avg_sensor')
 
-    # sort by aircraft id and day
-    sensor_data_df = sensor_data_df.orderBy('aircraft id', 'day')
-
-    return sensor_data_df
+    return sensor_data_df.orderBy('aircraft id', 'day')
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
@@ -153,6 +147,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
+    print(sensor_data.count())
 
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
