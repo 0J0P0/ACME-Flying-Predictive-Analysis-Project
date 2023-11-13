@@ -9,14 +9,25 @@ This pipeline generates a matrix where the rows denote the information of an air
 
 import os
 from colorama import Fore
-from pyspark.sql import Row
-from pyspark.sql.types import StructType, StructField, StringType, FloatType
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, sum, col, when, date_format, to_date, substring
 
+
 def extract_labels(spark: SparkSession, damos_properties: dict):
     """
+    Extracts the maintenance labels from the AMOS database and returns a DataFrame with the aircraft registration, the date and the label.
 
+    Parameters
+    ----------
+    spark : SparkSession
+        SparkSession object.
+    damos_properties : dict
+        Dictionary with the properties to connect to the AMOS database.
+
+    Returns
+    -------
+    df : pyspark.sql.DataFrame
+        DataFrame with the aircraft registration, the date and the label.
     """
 
     data = spark.read.jdbc(url=damos_properties["url"],
@@ -39,7 +50,19 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     """
+    Extracts the KPIs related to an aircraft from the Data Warehouse and returns a DataFrame with the FH, FC and DM KPIs.
 
+    Parameters
+    ----------
+    spark : SparkSession
+        SparkSession object.
+    dbw_properties : dict
+        Dictionary with the properties to connect to the Data Warehouse.
+
+    Returns
+    -------
+    df : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs.
     """
 
     data = spark.read.jdbc(url=dbw_properties["url"],
@@ -57,7 +80,19 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
 
 def extract_sensor_data(filepath: str, spark: SparkSession):
     """
+    Extracts the sensor data from the csv files and returns a DataFrame with the average measurement of the 3453 sensor per day.
 
+    Parameters
+    ----------
+    filepath : str
+        Path to the folder where the csv files are stored.
+    spark : SparkSession
+        SparkSession object.
+
+    Returns
+    -------
+    sensor_data_df : pyspark.sql.DataFrame
+        DataFrame with the average measurement of the 3453 sensor per day.
     """
 
     sensor_data = {}
@@ -94,7 +129,23 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
     """
+    Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
 
+    Parameters
+    ----------
+    filepath : str
+        Path to the folder where the csv files are stored.
+    spark : SparkSession
+        SparkSession object.
+    dbw_properties : dict
+        Dictionary with the properties to connect to the Data Warehouse.
+    damos_properties : dict
+        Dictionary with the properties to connect to the AMOS database.
+
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        Matrix with the gathered data.
     """
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
