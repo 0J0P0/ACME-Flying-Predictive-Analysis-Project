@@ -7,6 +7,7 @@ This pipeline generates a matrix where the rows denote the information of an air
     - Generate a matrix with the gathered data and store it.
 """
 
+
 import os
 from colorama import Fore
 from pyspark.sql import SparkSession
