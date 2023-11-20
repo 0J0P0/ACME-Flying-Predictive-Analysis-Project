@@ -79,8 +79,6 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     return df
 
 
-from pyspark.sql.functions import avg
-
 def extract_sensor_data(filepath: str, spark: SparkSession):
     """
     Extracts the sensor data from the csv files and returns a DataFrame with the average measurement of the 3453 sensor per day.
