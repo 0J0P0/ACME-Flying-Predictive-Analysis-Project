@@ -146,9 +146,11 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
+    print(kpis.count())
 
     print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
     labels = extract_labels(spark, damos_properties)
+    print(labels.count())
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
