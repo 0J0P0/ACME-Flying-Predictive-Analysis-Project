@@ -11,7 +11,7 @@ This pipeline generates a matrix where the rows denote the information of an air
 import os
 from colorama import Fore
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, sum, col, when, date_format, to_date, substring
+from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
 
 
 def extract_labels(spark: SparkSession, damos_properties: dict):
@@ -35,15 +35,13 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
-    # data = flightid?
-    # una misma date puede tener varias labels
     df = data.withColumn('date',
                          date_format(to_date(substring('flightid', 1, 6), 'yyMMdd'),'yyyy-MM-dd'))
 
-    # igual comentar esto y hacerlo cuando se junte todo
-    df = df.groupBy('date', 'aircraftregistration', 'kind').agg(when(col('kind'), 'Maintenance').otherwise('No Maintenance').alias('label'))
+    df = df.groupBy('date', 'aircraftregistration') \
+               .agg(lit('Maintenance').alias('kind'))
 
-    return df.select('aircraftregistration', 'date', 'label')
+    return df
 
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
