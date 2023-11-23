@@ -36,7 +36,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
                            properties=damos_properties)
 
     df = data.withColumn('date',
-                         date_format(to_date(substring('flightid', 1, 6), 'yyMMdd'),'yyyy-MM-dd'))
+                         date_format(to_date(substring('flightid', 1, 6), 'ddMMyy'),'yyyy-MM-dd'))
 
     df = df.groupBy('date', 'aircraftregistration').agg(lit('Maintenance').alias('kind'))
 
