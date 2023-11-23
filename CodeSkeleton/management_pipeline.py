@@ -38,8 +38,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
     df = data.withColumn('date',
                          date_format(to_date(substring('flightid', 1, 6), 'yyMMdd'),'yyyy-MM-dd'))
 
-    df = df.groupBy('date', 'aircraftregistration') \
-               .agg(lit('Maintenance').alias('kind'))
+    df = df.groupBy('date', 'aircraftregistration').agg(lit('Maintenance').alias('kind'))
 
     return df
 
@@ -152,8 +151,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
+    # matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
 
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    return matrix.orderBy('aircraft id', 'day')
+    return matrix.orderBy('aircraft id', 'day'), labels.orderBy('aircraftregistration', 'date')
