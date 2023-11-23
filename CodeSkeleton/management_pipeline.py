@@ -97,8 +97,8 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
         if filename.endswith(".csv"):
             flight = filename.split('-')
             aircraft, day = flight[4] + '-' + flight[5][:3], flight[0]
-            day = '20' + day[:2] + '-' + day[2:4] + '-' + day[4:]
-            
+            day = '20' + day[4:] + '-' + day[2:4] + '-' + day[:2]
+
             df = spark.read.csv(filepath + filename, sep=';')
             avg_sensor = df.select(avg(df['_c2']).alias('avg_sensor')).collect()[0]['avg_sensor']
             
@@ -155,4 +155,4 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    return matrix.orderBy('aircraft id', 'day'), labels.orderBy('aircraftregistration', 'date')
+    return sensor_data, kpis, matrix.orderBy('aircraft id', 'day'), labels.orderBy('aircraftregistration', 'date')

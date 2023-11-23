@@ -37,4 +37,4 @@ if __name__== "__main__":
                  "password": "DB021202"}
     
     # matrix = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
-    matrix, labels = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
+    sensor, kpis, matrix, labels = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
