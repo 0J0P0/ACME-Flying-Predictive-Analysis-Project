@@ -137,6 +137,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
 
+    # suponemos que las fechas de los ficheros csv son las de los vuelos
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
     print(sensor_data.count())
