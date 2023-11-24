@@ -154,6 +154,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     # matrix = matrix.withColumn('kind', lit('NoMaintenance'))
 
+    # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
     matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
 
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
