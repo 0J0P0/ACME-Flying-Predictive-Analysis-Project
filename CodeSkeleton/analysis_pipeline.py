@@ -20,7 +20,7 @@ def train_classifiers(df: DataFrame):
     Parameters
     ----------
     df : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the labels and the average measurements of the 3453 sensor.
+        DataFrame with the FH, FC and DM KPIs, aswell as the labels and aricraft, day and the average measurements of the 3453 sensor.
 
     Returns
     -------
@@ -37,6 +37,7 @@ def train_classifiers(df: DataFrame):
 
     return [dt, rf]
     return classifiers
+
 def train_classifiers(spark: SparkSession, df: pyspark.sql.DataFrame):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
@@ -58,12 +59,12 @@ def train_classifiers(spark: SparkSession, df: pyspark.sql.DataFrame):
     train, test = df.randomSplit([0.8, 0.2], seed=42)
 
     # Train classifiers
-    classifiers = train_classifiers(df)
+    classifiers = train_classifiers(train)
 
     # Evaluate classifiers
-    evaluate_classifiers(classifiers, df)
+    evaluate_classifiers(classifiers, test)
 
     # Save classifiers
-    save_classifiers(classifiers, aircraft_registration)
+    save_classifiers(classifiers)
 
     return None
