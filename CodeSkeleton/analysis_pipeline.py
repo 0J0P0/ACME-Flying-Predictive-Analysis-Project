@@ -35,7 +35,7 @@ def training(data):
         List of trained classifiers.
     """
     # Train a decision tree classifier from ml
-    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
+    dt = DecisionTreeClassifier(labelCol="labels", featuresCol="features")
 
     print("Optimizing Decision Tree Classifier...")
     # Create a pipeline with the DecisionTreeClassifier
@@ -44,11 +44,11 @@ def training(data):
     # Define the parameter grid, to adjust the maxDepth and maxBins of the DecisionTreeClassifier
     paramGrid = ParamGridBuilder() \
         .addGrid(dt.maxDepth, [5, 10, 15]) \
-        .addGrid(dt.maxBins, [20, 40, 60]) \
+        .addGrid(dt.maxBins, [120, 140, 160]) \
         .build()
 
     # Define the evaluator that will be used to evaluate the performance of the model, in this case the accuracy
-    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    evaluator = MulticlassClassificationEvaluator(labelCol="labels", predictionCol="prediction", metricName="accuracy")
 
     # Create the CrossValidator with a smaller number of folds
     crossval = CrossValidator(estimator=pipeline,
@@ -60,7 +60,7 @@ def training(data):
     cvModel = crossval.fit(data)
 
     # Get the best model from cross-validation
-    bestModel = cvModel.bestModel
+    bestModel= cvModel.bestModel
 
     print("Training complete!")
     # Print the best parameters
@@ -153,11 +153,11 @@ def train_classifiers(spark: SparkSession, df):
     # #Transform the data to the format needed for training
     df = format_data(df)
 
-    print('-'*50)
-    print(df.dtypes)
-    print('-'*50)
-    print(df.show())
-    print('-'*50)
+    # print('-'*50)
+    # print(df.dtypes)
+    # print('-'*50)
+    # print(df.show())
+    # print('-'*50)
 
     # Do the train and test split of df
     train, test = df.randomSplit([0.8, 0.2], seed=42)
@@ -165,12 +165,11 @@ def train_classifiers(spark: SparkSession, df):
     # Train classifiers
     classifiers = training(train)
 
-    return
+    # # Evaluate classifiers
+    # best_classifier = evaluate_classifiers(classifiers, test)
 
-    # Evaluate classifiers
-    best_classifier = evaluate_classifiers(classifiers, test)
-
-    # Save the classiers 
-    best_classifier.write().overwrite().save("models/best_classifier")
-    for classifier in classifiers:
-        classifier.write().overwrite().save("models/" + classifier.stages[0].__class__.__name__)
+    # print(best_classifier)
+    # # Save the classiers 
+    # best_classifier.write().overwrite().save("models/best_classifier")
+    # for classifier in classifiers:
+    #     classifier.write().overwrite().save("models/" + classifier.stages[0].__class__.__name__)
