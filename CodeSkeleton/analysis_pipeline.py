@@ -102,7 +102,7 @@ def format_data(data):
 
     return data
 
-def evaluate_classifiers(classifiers: list, test: DataFrame):
+def evaluate_classifiers(classifiers: list, test):
     """
     Evaluates the classifiers.
 
@@ -118,19 +118,33 @@ def evaluate_classifiers(classifiers: list, test: DataFrame):
     best_classifier : pyspark.ml.PipelineModel
         Best classifier.
     """
+    
     best_accuracy = 0
+
     # Evaluate classifiers
     for classifier in classifiers:
         predictions = classifier.transform(test)
-        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
-        accuracy = evaluator.evaluate(predictions)
+        evaluator_acc = MulticlassClassificationEvaluator(labelCol="labels",
+                                                      predictionCol="prediction",
+                                                      metricName="accuracy")
+        accuracy = evaluator_acc.evaluate(predictions)
+        
         print("Accuracy for classifier: ", accuracy)
+
+        evaluator_rec = MulticlassClassificationEvaluator(labelCol="labels",
+                                                      predictionCol="prediction",
+                                                      metricName="accuracy")
+        recall = evaluator_rec.evaluate(predictions)
+        
+        print("Recall for classifier: ", recall)
+
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             best_classifier = classifier
 
     # Get the best classifier
-    print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__)
+    print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
+
     return best_classifier
 
 def train_classifiers(spark: SparkSession, df):
@@ -165,8 +179,8 @@ def train_classifiers(spark: SparkSession, df):
     # Train classifiers
     classifiers = training(train)
 
-    # # Evaluate classifiers
-    # best_classifier = evaluate_classifiers(classifiers, test)
+    # Evaluate classifiers
+    best_classifier = evaluate_classifiers(classifiers, test)
 
     # print(best_classifier)
     # # Save the classiers 
