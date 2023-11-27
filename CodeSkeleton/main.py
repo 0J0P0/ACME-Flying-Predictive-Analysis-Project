@@ -3,6 +3,7 @@ import sys
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from management_pipeline import managment_pipe
+from analysis_pipeline import train_classifiers
 
 
 HADOOP_HOME = "./resources/hadoop_home"
@@ -37,4 +38,10 @@ if __name__== "__main__":
                  "password": "DB021202"}
     
     # matrix = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
-    matrix, matrix2 = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
+    if not os.path.exists("./resources/matrix2.csv"):
+        matrix, matrix2 = managment_pipe("./resources/trainingData/", spark, dbw_properties, damos_properties)
+        matrix2.write.csv("./resources/matrix2.csv", header=True)
+    else:
+        matrix2 = spark.read.csv("./resources/matrix2.csv", header=True)
+
+    train_classifiers(spark, matrix2)

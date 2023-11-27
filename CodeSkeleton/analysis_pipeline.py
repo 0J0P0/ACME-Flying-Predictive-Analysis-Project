@@ -20,7 +20,7 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col
 
-def train_classifiers(data: DataFrame):
+def training(data):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -69,27 +69,36 @@ def train_classifiers(data: DataFrame):
 
     return [bestModel]
 
-def format_data(data: DataFrame):
+def format_data(data):
     """ 
     Formats the data for training.
     """
 
     # 1. Convert 'day' to a numerical representation
-    data = data.withColumn("day", col("day").cast("long"))
+    # data = data.withColumn("day", col("day").cast("string"))
+    # data = data.withColumn("aircraft id", col("aircraft id").cast("string"))
+    # data = data.withColumn("kind", col("kind").cast("string"))
+    data = data.withColumn("avg_sensor", col("avg_sensor").cast("float"))
+    data = data.withColumn("flighthours", col("flighthours").cast("float"))
+    data = data.withColumn("flightcycles", col("flightcycles").cast("float"))
+    data = data.withColumn("delayedminutes", col("delayedminutes").cast("float"))
 
-    # 2. StringIndexer for converting categorical variables to numerical ones
-    indexers = [StringIndexer(inputCol="aircraft", outputCol="aircraft_index", handleInvalid="skip"),
-                StringIndexer(inputCol="Maintenance", outputCol="label")]
+    # # 2. StringIndexer for converting categorical variables to numerical ones
+    indexers = [StringIndexer(inputCol="aircraft id", outputCol="aircraft_id", handleInvalid="skip"),
+                StringIndexer(inputCol="day", outputCol="day_id", handleInvalid="skip"),
+                StringIndexer(inputCol="kind", outputCol="labels")]
+
+    # indexers = [StringIndexer(inputCol="kind", outputCol="labels")]
 
     pipeline = Pipeline(stages=indexers)
     data = pipeline.fit(data).transform(data)
 
     # 3. Assemble feature vector
-    assembler = VectorAssembler(inputCols=["FH", "FC", "DM", "avg_measure", "aircraft_index", "day"], outputCol="features")
+    assembler = VectorAssembler(inputCols=["aircraft_id", "day_id", "avg_sensor", "flighthours", "flightcycles", "delayedminutes"], outputCol="features")
     data = assembler.transform(data)
 
     # 4. Select relevant columns (features and label)
-    data = data.select("features", "label")
+    data = data.select("features", "labels")
 
     return data
 
@@ -124,7 +133,7 @@ def evaluate_classifiers(classifiers: list, test: DataFrame):
     print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__)
     return best_classifier
 
-def train_classifiers(spark: SparkSession, df: pyspark.sql.DataFrame):
+def train_classifiers(spark: SparkSession, df):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -141,14 +150,22 @@ def train_classifiers(spark: SparkSession, df: pyspark.sql.DataFrame):
     None
     """
 
-    #Transform the data to the format needed for training
+    # #Transform the data to the format needed for training
     df = format_data(df)
+
+    print('-'*50)
+    print(df.dtypes)
+    print('-'*50)
+    print(df.show())
+    print('-'*50)
 
     # Do the train and test split of df
     train, test = df.randomSplit([0.8, 0.2], seed=42)
 
     # Train classifiers
-    classifiers = train_classifiers(train)
+    classifiers = training(train)
+
+    return
 
     # Evaluate classifiers
     best_classifier = evaluate_classifiers(classifiers, test)
@@ -157,5 +174,3 @@ def train_classifiers(spark: SparkSession, df: pyspark.sql.DataFrame):
     best_classifier.write().overwrite().save("models/best_classifier")
     for classifier in classifiers:
         classifier.write().overwrite().save("models/" + classifier.stages[0].__class__.__name__)
-        
-    return None
