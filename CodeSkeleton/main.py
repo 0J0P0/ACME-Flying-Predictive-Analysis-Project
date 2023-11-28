@@ -37,7 +37,6 @@ if __name__== '__main__':
                  'user': 'juan.pablo.zaldivar',
                  'password': 'DB021202'}
     
-    # matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
     if not os.path.exists('./resources/matrix'):
         matrix, matrix2 = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
         matrix2.write.csv('./resources/matrix', header=True)
