@@ -11,6 +11,7 @@ This pipeline generates a matrix where the rows denote the information of an air
 import os
 from colorama import Fore
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
 
 
@@ -152,10 +153,25 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    # matrix = matrix.withColumn('kind', lit('NoMaintenance'))
-
     # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
     matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
+
+    newSchema = StructType([
+        StructField("aircraft id", StringType(), True),
+        StructField("day", StringType(), True),
+        StructField("avg_sensor", DoubleType(), True),
+        StructField("flighthours", DoubleType(), True),
+        StructField("flightcycles", IntegerType(), True),
+        StructField("delayedminutes", DoubleType(), True),
+        StructField("kind", StringType(), True)
+    ])
+
+    matrix2 = matrix2.withColumn('avg_sensor', matrix2['avg_sensor'].cast(DoubleType())) \
+                        .withColumn('flighthours', matrix2['flighthours'].cast(DoubleType())) \
+                        .withColumn('flightcycles', matrix2['flightcycles'].cast(IntegerType())) \
+                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(j()))
+    
+    matrix2 = spark.createDataFrame(data=matrix2.rdd, schema=newSchema, verifySchema=True)
 
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
