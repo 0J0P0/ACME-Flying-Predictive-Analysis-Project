@@ -1,3 +1,26 @@
+##############################################################################################################
+# Authors:      Enric Millan, Juan Pablo Zaldivar                                                            #
+#                                                                                                            #
+# Project:      Predictive Analysis Project                                                                  #
+#                                                                                                            #
+# Input:        - Path to the folder where the csv files are stored.                                         #
+#               - SparkSession object.                                                                       #
+#               - Dictionary with the properties to connect to the Data Warehouse.                           #
+#               - Dictionary with the properties to connect to the AMOS database.                            #
+#                                                                                                            #
+# Output:       - Matrix with the gathered data.                                                             #
+#                                                                                                            #
+# Usage:        Called from main.py.                                                                         #
+#                                                                                                            #
+# Requirements: - pyspark.sql                                                                                #
+#               - pyspark.sql.types                                                                          #
+#               - pyspark.sql.functions                                                                      #
+#               - os                                                                                         #
+#               - colorama                                                                                   #
+#                                                                                                            #
+#############################################################################################################
+
+
 """
 This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. Thus, this pipeline must:
 
