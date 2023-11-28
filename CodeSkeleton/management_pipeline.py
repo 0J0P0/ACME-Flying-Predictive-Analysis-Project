@@ -30,12 +30,25 @@ This pipeline generates a matrix where the rows denote the information of an air
     - Generate a matrix with the gathered data and store it.
 """
 
+##############################################################################################################
+#                                                                                                            #
+# Imports                                                                                                    #
+#                                                                                                            #
+##############################################################################################################
+
 
 import os
 from colorama import Fore
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
+
+
+##############################################################################################################
+#                                                                                                            #
+# Functions                                                                                                  #
+#                                                                                                            #
+##############################################################################################################
 
 
 def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
