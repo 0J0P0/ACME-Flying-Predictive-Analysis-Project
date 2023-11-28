@@ -201,18 +201,18 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
 
     # suponemos que las fechas de los ficheros csv son las de los vuelos
-    print(f'{Fore.YELLOW}Extarcting sensor data...')
+    print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
-    print(sensor_data.count())
+    # print(sensor_data.count())
 
-    print(f'Extarcting KPIs data...')
+    print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
-    print(kpis.count())
+    # print(kpis.count())
 
     # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
-    print(f'Extarcting maintenance labels...{Fore.RESET}')
+    print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
     labels = extract_labels(spark, damos_properties)
-    print(labels.count())
+    # print(labels.count())
 
     matrix, matrix2 = join_dataframes(spark, sensor_data, kpis, labels)
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
