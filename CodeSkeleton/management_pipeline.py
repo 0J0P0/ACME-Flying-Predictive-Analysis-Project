@@ -169,7 +169,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     matrix2 = matrix2.withColumn('avg_sensor', matrix2['avg_sensor'].cast(DoubleType())) \
                         .withColumn('flighthours', matrix2['flighthours'].cast(DoubleType())) \
                         .withColumn('flightcycles', matrix2['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(j()))
+                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(DoubleType()))
     
     matrix2 = spark.createDataFrame(data=matrix2.rdd, schema=newSchema, verifySchema=True)
 
