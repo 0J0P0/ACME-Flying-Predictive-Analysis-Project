@@ -102,6 +102,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
+    # que es mejor, hacer el select aqui o dejar que lo haga el group by?
     # df = data.select('aircraftregistration', 'starttime').distinct()
 
     data = data.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
@@ -218,9 +219,10 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
     print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
     labels = extract_labels(spark, damos_properties)
-    # print(labels.count())
+    print(labels.count())
+    print(labels.show())
 
     matrix, matrix2 = join_dataframes(spark, sensor_data, kpis, labels)
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    return labels, matrix2
+    return matrix2
