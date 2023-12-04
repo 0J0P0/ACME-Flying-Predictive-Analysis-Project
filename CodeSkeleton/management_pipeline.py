@@ -147,7 +147,7 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
 
 def extract_sensor_data(filepath: str, spark: SparkSession):
     """
-    Extracts the sensor data from the csv files and returns a DataFrame with the average measurement of the 3453 sensor per day.
+    Extracts the sensor data from the CSV files and returns a DataFrame with the aircraft registration, the date and the average measurement of the 3453 sensor.
 
     Parameters
     ----------
@@ -158,32 +158,25 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
 
     Returns
     -------
-    sensor_data_df : pyspark.sql.DataFrame
-        DataFrame with the average measurement of the 3453 sensor per day.
+    df : pyspark.sql.DataFrame
+        DataFrame with the aircraft registration, the date and the average measurement of the 3453 sensor.
     """
-    
-    rows = []
-    files = os.listdir(filepath)
-    
-    for filename in files:
-        if filename.endswith(".csv"):
-            flight = filename.split('-')
-            aircraft, day = flight[4] + '-' + flight[5][:3], flight[0]
-            day = '20' + day[4:] + '-' + day[2:4] + '-' + day[:2]
 
-            df = spark.read.csv(filepath + filename, sep=';')
-            avg_sensor = df.select(avg(df['_c2']).alias('avg_sensor')).collect()[0]['avg_sensor']
-            
-            rows.append((aircraft, day, avg_sensor))
+    # read all the csv files
+    df = spark.read.csv(filepath, header=True)
 
-    columns = ['aircraft id', 'day', 'avg_sensor']
-    sensor_data_df = spark.createDataFrame(rows, columns)
-    
-    # Grouping by aircraft id and day, selecting the average sensor value
-    sensor_data_df = sensor_data_df.groupBy('aircraft id', 'day').agg({'avg_sensor': 'avg'})
-    sensor_data_df = sensor_data_df.withColumnRenamed('avg(avg_sensor)', 'avg_sensor')
+    # select only the columns we want
+    df = df.select('aircraft id', 'date', 'value')
 
-    return sensor_data_df
+    # # cast the columns to the correct types
+    # df = df.withColumn('date', df['date'].cast(StringType())) \
+    #         .withColumn('value', df['value'].cast(DoubleType()))
+
+    # group by aircraft id and date and calculate the average of the value sensor
+    df = df.groupBy('aircraft id', 'date').agg(avg('value').alias('avg_sensor'))
+
+    # return df.orderBy('aircraft id', 'date')
+    return df
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
@@ -212,8 +205,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # suponemos que las fechas de los ficheros csv son las de los vuelos
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
-    # print(sensor_data.count())
-
+    print(sensor_data.count())
+    exit()
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
     # print(kpis.count())
@@ -221,8 +214,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
     print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
     labels = extract_labels(spark, damos_properties)
-    print(labels.count())
-    print(labels.show())
+    # print(labels.count())
 
     matrix, matrix2 = join_dataframes(spark, sensor_data, kpis, labels)
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
