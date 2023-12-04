@@ -52,11 +52,14 @@ from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
 
 
 def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
-    """"""
+    """
+    l
+    """
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), 'inner').drop('aircraftregistration', 'date')
+    # make a lef join of matrix with labels, conserving all the rows of labels
+    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), how='left').drop('aircraftregistration', 'date')
 
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),

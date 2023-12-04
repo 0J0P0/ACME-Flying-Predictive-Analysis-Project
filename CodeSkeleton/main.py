@@ -37,10 +37,12 @@ if __name__== '__main__':
                  'user': 'juan.pablo.zaldivar',
                  'password': 'DB021202'}
     
-    if not os.path.exists('./resources/matrix'):
-        matrix, matrix2 = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
-        matrix2.write.csv('./resources/matrix', header=True)
-    else:
-        matrix2 = spark.read.csv('./resources/matrix', header=True)
+    # if not os.path.exists('./resources/matrix'):
+    #     matrix, matrix2 = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
+    #     matrix2.write.csv('./resources/matrix', header=True)
+    # else:
+    #     matrix2 = spark.read.csv('./resources/matrix', header=True)
+
+    labels, matrix2 = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
 
     # train_classifiers(spark, matrix2)
