@@ -38,8 +38,9 @@ This pipeline generates a matrix where the rows denote the information of an air
 
 
 import os
+import pandas as pd
 from colorama import Fore
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 
@@ -51,9 +52,25 @@ from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 ##############################################################################################################
 
 
-def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
+def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame):
     """
-    l
+    Joins the sensor measurements, the KPIs and the labels, and returns a DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
+
+    Parameters
+    ----------
+    spark : SparkSession
+        SparkSession object.
+    sensor_data : pyspark.sql.DataFrame
+        DataFrame with the average measurement per flight per day.
+    kpis : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs.
+    labels : pyspark.sql.DataFrame
+        DataFrame with the aircraft registration, the date and the label.
+
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
     """
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
@@ -61,8 +78,26 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     # make a lef join of matrix with labels, conserving all the rows of labels
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
-    # rows with missing values in the label column are filled with 'No Maintenance'
-    matrix = matrix.fillna('No Maintenance', subset=['kind'])
+    labels = labels.orderBy('aircraftregistration', 'starttime')
+
+    # iterate over matrix and labels to fill the missing labels
+    matrix = matrix.toPandas()
+    labels = labels.toPandas()
+
+    matrix['date'] = pd.to_datetime(matrix['date'])
+    labels['starttime'] = pd.to_datetime(labels['starttime'])
+    print(matrix.head(2))
+
+    for i, row in matrix.iterrows():
+        if row['label'] == None:
+            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
+
+            if seven_day_label.empty:
+                matrix.at[i, 'label'] = 'No Maintenance'
+            else:
+                matrix.at[i, 'label'] = 'Maintenance'
+
+    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),
@@ -71,7 +106,7 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
         StructField("flighthours", DoubleType(), True),
         StructField("flightcycles", IntegerType(), True),
         StructField("delayedminutes", IntegerType(), True),
-        StructField("kind", StringType(), True)
+        StructField("label", StringType(), True)
     ])
 
     matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
@@ -110,7 +145,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
 
     labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
-    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('kind'))
+    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('label'))
     
     # return labels.orderBy('aircraftregistration', 'date')
     return labels
@@ -147,6 +182,21 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
 
 
 def extract_sensor_data(filepath: str, spark: SparkSession):
+    """
+    Extracts the sensor measurements from the CSV files and returns a DataFrame with the average measurement per flight per day.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the folder where the csv files are stored.
+    spark : SparkSession
+        SparkSession object.
+
+    Returns
+    -------
+    sensors : pyspark.sql.DataFrame
+        DataFrame with the average measurement per flight per day.
+    """
 
     def extract_aircraft_id(file_name):
         flightid = file_name.split('-')
@@ -172,7 +222,6 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
     return sensors
-
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
