@@ -41,7 +41,7 @@ import os
 import pandas as pd
 from colorama import Fore
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
+from pyspark.sql.types import StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 
 
@@ -50,6 +50,32 @@ from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 # Functions                                                                                                  #
 #                                                                                                            #
 ##############################################################################################################
+
+
+def format_matrix(matrix: DataFrame) -> DataFrame:
+    """
+    Formats the matrix so that the columns are the FH, FC and DM KPIs, and the average measurement of the 3453 sensor, and the label.
+
+    Parameters
+    ----------
+    matrix : pyspark.sql.DataFrame
+        Matrix with the gathered data.
+
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        Matrix with the gathered data.
+    """
+
+    matrix = matrix.withColumn('aircraft id', matrix['aircraft id'].cast(StringType())) \
+        .withColumn('date', matrix['date'].cast(StringType())) \
+        .withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
+        .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
+        .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
+        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
+        .withColumn('label', matrix['label'].cast(IntegerType()))
+
+    return matrix.orderBy('aircraft id', 'date')
 
 
 def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) -> DataFrame:
@@ -96,25 +122,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
-    newSchema = StructType([
-        StructField("aircraft id", StringType(), True),
-        StructField("date", StringType(), True),
-        StructField("avg_sensor", DoubleType(), True),
-        StructField("flighthours", DoubleType(), True),
-        StructField("flightcycles", IntegerType(), True),
-        StructField("delayedminutes", IntegerType(), True),
-        StructField("label", IntegerType(), True)
-    ])
-
-    matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
-                        .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
-                        .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
-                        .withColumn('label', matrix['label'].cast(IntegerType()))
-    
-    matrix = spark.createDataFrame(data=matrix.rdd, schema=newSchema, verifySchema=True)
-
-    return matrix.orderBy('aircraft id', 'date')
+    return format_matrix(matrix)
 
 
 def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
@@ -244,22 +252,23 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     """
     
     if os.path.exists('./resources/matrix'):
-        return spark.read.csv('./resources/matrix', header=True)
+        matrix = spark.read.csv('./resources/matrix', header=True)
+        matrix = format_matrix(matrix)
+    else:
+        print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
+        sensor_data = extract_sensor_data(filepath, spark)
+        # print(sensor_data.count())
+        
+        print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
+        kpis = extract_dw_data(spark, dbw_properties)
+        # print(kpis.count())
 
-    print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
-    sensor_data = extract_sensor_data(filepath, spark)
-    # print(sensor_data.count())
-    
-    print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
-    kpis = extract_dw_data(spark, dbw_properties)
-    # print(kpis.count())
+        print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
+        labels = extract_labels(spark, damos_properties)
+        # print(labels.count())
 
-    print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
-    labels = extract_labels(spark, damos_properties)
-    # print(labels.count())
+        matrix = join_dataframes(spark, sensor_data, kpis, labels)
 
-    matrix = join_dataframes(spark, sensor_data, kpis, labels)
-
-    matrix.write.csv('./resources/matrix', header=True)
+        matrix.write.csv('./resources/matrix', header=True)
 
     return matrix

@@ -107,46 +107,6 @@ def training(data):
     return models
 
 
-def format_matrix(matrix: DataFrame) -> DataFrame:
-    """ 
-    Formats the matrix for training. 
-
-    Parameters
-    ----------
-    matrix : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the label and aricraft, day and the average measurements of the 3453 sensor.
-    
-    Returns
-    -------
-    matrix : pyspark.sql.DataFrame
-        DataFrame with the formatted matrix.
-    """
-
-    matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
-                        .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
-                        .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
-                        .withColumn('label', matrix['label'].cast(IntegerType()))
-
-    # # 2. StringIndexer for converting categorical variables to numerical ones
-    indexers = [StringIndexer(inputCol='aircraft id', outputCol='aircraft_id', handleInvalid='skip'),
-                StringIndexer(inputCol='date', outputCol='date_id', handleInvalid='skip')]
-
-    # indexers = [StringIndexer(inputCol='kind', outputCol='label')]
-
-    pipeline = Pipeline(stages=indexers)
-    matrix = pipeline.fit(matrix).transform(matrix)
-
-    # 3. Assemble feature vector
-    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
-    matrix = assembler.transform(matrix)
-
-    # 4. Select relevant columns (features and label)
-    matrix = matrix.select('features', 'label')
-
-    return matrix
-
-
 def evaluate_classifiers(classifiers: list, test):
     """
     Evaluates the classifiers.
@@ -193,6 +153,34 @@ def evaluate_classifiers(classifiers: list, test):
     return best_classifier
 
 
+def format_dataa(matrix: DataFrame) -> DataFrame:
+    """ 
+    Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
+
+    Parameters
+    ----------
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs, aswell as the label and aricraft, day and the average measurements of the 3453 sensor.
+    
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the formatted matrix.
+    """
+
+    indexers = [StringIndexer(inputCol='aircraft id', outputCol='aircraft_id', handleInvalid='skip'),
+                StringIndexer(inputCol='date', outputCol='date_id', handleInvalid='skip')]
+
+    pipeline = Pipeline(stages=indexers)
+    matrix = pipeline.fit(matrix).transform(matrix)
+
+    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
+    
+    matrix = assembler.transform(matrix)
+
+    return matrix.select('features', 'label')
+
+
 def train_classifiers(spark: SparkSession, matrix):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
@@ -210,18 +198,10 @@ def train_classifiers(spark: SparkSession, matrix):
     None
     """
 
-    matrix = format_matrix(matrix)
+    matrix = format_dataa(matrix)
 
-    print('-'*50)
-    print(matrix.dtypes)
-    print('-'*50)
-    print(matrix.show())
-    print('-'*50)
-
-    # Do the train and test split of matrix
     train, test = matrix.randomSplit([0.8, 0.2], seed=42)
 
-    # Train classifiers
     classifiers = training(train)
 
     # Evaluate classifiers
