@@ -52,7 +52,7 @@ from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 ##############################################################################################################
 
 
-def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame):
+def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) -> DataFrame:
     """
     Joins the sensor measurements, the KPIs and the labels, and returns a DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
 
@@ -77,7 +77,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
-    # matrix.fillna(0, subset=['label'])
+    # matrix.fillna('0, subset=['label'])
 
     matrix = matrix.toPandas()
     labels = labels.toPandas()
@@ -103,20 +103,21 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         StructField("flighthours", DoubleType(), True),
         StructField("flightcycles", IntegerType(), True),
         StructField("delayedminutes", IntegerType(), True),
-        StructField("label", StringType(), True)
+        StructField("label", IntegerType(), True)
     ])
 
     matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
                         .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
                         .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType()))
+                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType()) \
+                        .withColumn('label', matrix['label'].cast(IntegerType())))
     
     matrix = spark.createDataFrame(data=matrix.rdd, schema=newSchema, verifySchema=True)
 
     return matrix.orderBy('aircraft id', 'date')
 
 
-def extract_labels(spark: SparkSession, damos_properties: dict):
+def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
     """
     Extracts the maintenance labels from the AMOS database and returns a DataFrame with the aircraft registration, the date and the label.
 
@@ -148,7 +149,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
     return labels
 
 
-def extract_dw_data(spark: SparkSession, dbw_properties: dict):
+def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
     """
     Extracts the KPIs related to an aircraft from the Data Warehouse and returns a DataFrame with the FH, FC and DM KPIs.
 
@@ -178,7 +179,7 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
     return df
 
 
-def extract_sensor_data(filepath: str, spark: SparkSession):
+def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
     """
     Extracts the sensor measurements from the CSV files and returns a DataFrame with the average measurement per flight per day.
 
@@ -221,7 +222,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     return sensors
 
 
-def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
+def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict) -> DataFrame:
     """
     Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
 
@@ -244,7 +245,6 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
 
-    # suponemos que las fechas de los ficheros csv son las de los vuelos
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
     # print(sensor_data.count())
@@ -253,7 +253,6 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     kpis = extract_dw_data(spark, dbw_properties)
     # print(kpis.count())
 
-    # los labels son mirando a 7 dias vista para cada vuelo. Es decir que un vuelo tiene label maintenance si es que en los 7 dias siguientes tiene un vuelo con label maintenance
     print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
     labels = extract_labels(spark, damos_properties)
     # print(labels.count())
