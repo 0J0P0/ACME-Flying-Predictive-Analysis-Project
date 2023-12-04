@@ -242,11 +242,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     matrix : pyspark.sql.DataFrame
         Matrix with the gathered data.
     """
-
-    print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
     
     if os.path.exists('./resources/matrix'):
-        print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
         return spark.read.csv('./resources/matrix', header=True)
 
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
@@ -262,7 +259,6 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # print(labels.count())
 
     matrix = join_dataframes(spark, sensor_data, kpis, labels)
-    print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
     matrix.write.csv('./resources/matrix', header=True)
 

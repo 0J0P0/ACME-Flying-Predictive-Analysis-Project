@@ -1,5 +1,6 @@
 import os
 import sys
+from colorama import Fore
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from management_pipeline import managment_pipe
@@ -23,10 +24,8 @@ if __name__== '__main__':
     conf.set('spark.app.name','DBALab')
     conf.set('spark.jars', JDBC_JAR)
 
-    # Initialize a Spark session
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-    # Create and point to your pipelines here
     dbw_properties = {'driver': 'org.postgresql.Driver',
                  'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
                  'user': 'juan.pablo.zaldivar',
@@ -37,6 +36,13 @@ if __name__== '__main__':
                  'user': 'juan.pablo.zaldivar',
                  'password': 'DB021202'}
     
-    matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
 
+    print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
+    
+    matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
+    
+    print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
+    
     train_classifiers(spark, matrix)
+    
+    print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
