@@ -41,7 +41,7 @@ import os
 from colorama import Fore
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
-from pyspark.sql.functions import avg, sum, lit, to_date, col
+from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 
 
 ##############################################################################################################
@@ -56,14 +56,14 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     l
     """
 
-    matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
+    matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
     # make a lef join of matrix with labels, conserving all the rows of labels
-    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
+    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),
-        StructField("day", StringType(), True),
+        StructField("date", StringType(), True),
         StructField("avg_sensor", DoubleType(), True),
         StructField("flighthours", DoubleType(), True),
         StructField("flightcycles", IntegerType(), True),
@@ -78,7 +78,7 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     
     matrix2 = spark.createDataFrame(data=matrix2.rdd, schema=newSchema, verifySchema=True)
 
-    return matrix.orderBy('aircraft id', 'day'), matrix2.orderBy('aircraft id', 'day')
+    return matrix.orderBy('aircraft id', 'date'), matrix2.orderBy('aircraft id', 'date')
 
 
 def extract_labels(spark: SparkSession, damos_properties: dict):
@@ -108,8 +108,6 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
     labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
     labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('kind'))
-    
-    print(labels.count()) # solo para checar columnas
     
     # return labels.orderBy('aircraftregistration', 'date')
     return labels
@@ -147,49 +145,31 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
 
 def extract_sensor_data(filepath: str, spark: SparkSession):
 
-    # add a column with the aircraft id to each csv file
-    for filename in os.listdir(filepath):
-        if filename.endswith(".csv"):
-            df = spark.read.csv(filepath + filename, header=True)
-            flight = filename.split('-')
-            aircraft_id = flight[4] + '-' + flight[5].split('.')[0]
+    def extract_aircraft_id(file_name):
+        flightid = file_name.split('-')
+        return flightid[4] + '-' + flightid[5].split('.')[0]
 
-            df = df.withColumn('aircraft id', lit(aircraft_id))
-            df.write.csv(filepath + 'mod/' + filename, header=True)
+    df_list = []
+    all_files = os.listdir(filepath)
+    for file in all_files:
+        if file.endswith('.csv'):
+            df = spark.read.option("header", "true").option("delimiter", ";").csv(filepath + file)
+            
+            aircraft_id = extract_aircraft_id(file)
+            
+            df = df.withColumn("aircraft id", lit(aircraft_id))
+            df = df.withColumn("date", substring("date", 1, 10))
+            
+            df_list.append(df)
 
-    # read all the csv files
-    df = spark.read.csv(filepath, header=True)
+    combined_df = df_list[0]
+    for i in range(1, len(df_list)):
+        combined_df = combined_df.union(df_list[i])
 
-    # select only the columns we want
-    df = df.select('aircraft id', 'date', 'value')
+    result_df = combined_df.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
-    # # cast the columns to the correct types
-    # df = df.withColumn('date', df['date'].cast(StringType())) \
-    #         .withColumn('value', df['value'].cast(DoubleType()))
+    return result_df
 
-    # group by aircraft id and date and calculate the average of the value sensor
-    df = df.groupBy('aircraft id', 'date').agg(avg('value').alias('avg_sensor'))
-    # return df.orderBy('date')
-
-    # for filename in os.listdir(filepath):
-    #     if filename.endswith(".csv"):
-    #         df = spark.read.csv(filepath + filename, header=True, sep=';')
-    #         flight = filename.split('-')
-    #         aircraft_id = flight[4] + '-' + flight[5].split('.')[0]
-
-    #         df = df.withColumn('aircraft id', lit(aircraft_id))
-
-    #         df = df.groupBy('aircraft id', 'date').agg(avg('value').alias('avg_sensor'))
-
-    #         if 'sensor_data' not in locals():
-    #             sensor_data = df
-    #         else:
-    #             sensor_data = sensor_data.union(df)
-
-    # print(sensor_data.count())
-    # print(sensor_data.show())
-
-    return df
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
@@ -218,8 +198,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # suponemos que las fechas de los ficheros csv son las de los vuelos
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
-    # print(sensor_data.count())
-    exit()
+    print(sensor_data.count())
+    
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
     # print(kpis.count())
