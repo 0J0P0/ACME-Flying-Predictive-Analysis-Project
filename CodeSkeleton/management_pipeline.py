@@ -103,7 +103,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
-    # matrix.fillna('0, subset=['label'])
+    # matrix.fillna(0, subset=['label'])
 
     matrix = matrix.toPandas()
     labels = labels.toPandas()
