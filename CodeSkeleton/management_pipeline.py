@@ -52,6 +52,7 @@ from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
 
 
 def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
+    """"""
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
@@ -103,7 +104,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
 
     df = df.groupBy('date', 'aircraftregistration').agg(lit('Maintenance').alias('kind'))
 
-    return df
+    return df.orderBy('aircraftregistration', 'date')
 
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
@@ -217,4 +218,4 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     matrix, matrix2 = join_dataframes(spark, sensor_data, kpis, labels)
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    return matrix, matrix2
+    return labels, matrix2
