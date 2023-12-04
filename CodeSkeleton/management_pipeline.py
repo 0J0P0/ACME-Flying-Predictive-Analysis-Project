@@ -98,19 +98,21 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
         DataFrame with the aircraft registration, the date and the label.
     """
 
-    data = spark.read.jdbc(url=damos_properties["url"],
+    labels = spark.read.jdbc(url=damos_properties["url"],
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
     # que es mejor, hacer el select aqui o dejar que lo haga el group by?
-    # df = data.select('aircraftregistration', 'starttime').distinct()
+    # labels = labels.select('aircraftregistration', 'starttime').distinct()
 
-    data = data.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
+    labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
-    df = df.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('kind'))
-
-    # return df.orderBy('aircraftregistration', 'date')
-    return df
+    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('kind'))
+    
+    print(labels.count()) # solo para checar columnas
+    
+    # return labels.orderBy('aircraftregistration', 'date')
+    return labels
 
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
@@ -138,7 +140,7 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict):
         sum('flighthours').alias('flighthours'),
         sum('flightcycles').alias('flightcycles'),
         sum('delayedminutes').alias('delayedminutes'),
-    ).orderBy('aircraftid', 'timeid')
+    )#.orderBy('aircraftid', 'timeid')
 
     return df
 
@@ -181,7 +183,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     sensor_data_df = sensor_data_df.groupBy('aircraft id', 'day').agg({'avg_sensor': 'avg'})
     sensor_data_df = sensor_data_df.withColumnRenamed('avg(avg_sensor)', 'avg_sensor')
 
-    return sensor_data_df.orderBy('aircraft id', 'day')
+    return sensor_data_df
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
