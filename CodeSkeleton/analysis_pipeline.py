@@ -18,6 +18,52 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 
 
+def evaluate_classifiers(classifiers: list, test):
+    """
+    Evaluates the classifiers.
+
+    Parameters
+    ----------
+    classifiers : list
+        List of trained classifiers.
+    test : pyspark.sql.DataFrame
+        DataFrame with the test data.
+
+    Returns
+    -------
+    best_classifier : pyspark.ml.PipelineModel
+        Best classifier.
+    """
+    
+    best_accuracy = 0
+
+    # Evaluate classifiers
+    for classifier in classifiers:
+        predictions = classifier.transform(test)
+        evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
+                                                      predictionCol="prediction",
+                                                      metricName="accuracy")
+        accuracy = evaluator_acc.evaluate(predictions)
+        
+        print("Accuracy for classifier: ", accuracy)
+
+        evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
+                                                      predictionCol="prediction",
+                                                      metricName="accuracy")
+        recall = evaluator_rec.evaluate(predictions)
+        
+        print("Recall for classifier: ", recall)
+
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_classifier = classifier
+
+    # Get the best classifier
+    print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
+
+    return best_classifier
+
+
 def training(data):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
@@ -32,6 +78,7 @@ def training(data):
     classifiers : list
         List of trained classifiers.
     """
+    
     # Train a decision tree classifier from ml
     dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 
@@ -106,53 +153,6 @@ def training(data):
 
     return models
 
-
-def evaluate_classifiers(classifiers: list, test):
-    """
-    Evaluates the classifiers.
-
-    Parameters
-    ----------
-    classifiers : list
-        List of trained classifiers.
-    test : pyspark.sql.DataFrame
-        DataFrame with the test data.
-
-    Returns
-    -------
-    best_classifier : pyspark.ml.PipelineModel
-        Best classifier.
-    """
-    
-    best_accuracy = 0
-
-    # Evaluate classifiers
-    for classifier in classifiers:
-        predictions = classifier.transform(test)
-        evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
-                                                      predictionCol="prediction",
-                                                      metricName="accuracy")
-        accuracy = evaluator_acc.evaluate(predictions)
-        
-        print("Accuracy for classifier: ", accuracy)
-
-        evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
-                                                      predictionCol="prediction",
-                                                      metricName="accuracy")
-        recall = evaluator_rec.evaluate(predictions)
-        
-        print("Recall for classifier: ", recall)
-
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_classifier = classifier
-
-    # Get the best classifier
-    print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
-
-    return best_classifier
-
-
 def format_dataa(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
@@ -181,7 +181,7 @@ def format_dataa(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label')
 
 
-def train_classifiers(spark: SparkSession, matrix):
+def train_classifiers(matrix: DataFrame):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -204,7 +204,6 @@ def train_classifiers(spark: SparkSession, matrix):
 
     classifiers = training(train)
 
-    # Evaluate classifiers
     best_classifier = evaluate_classifiers(classifiers, test)
 
     # print(best_classifier)

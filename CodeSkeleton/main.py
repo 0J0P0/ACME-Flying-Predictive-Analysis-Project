@@ -43,6 +43,6 @@ if __name__== '__main__':
     
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
-    train_classifiers(spark, matrix)
+    train_classifiers(matrix)
     
     print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
