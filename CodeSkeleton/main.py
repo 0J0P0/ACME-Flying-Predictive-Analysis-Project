@@ -45,4 +45,4 @@ if __name__== '__main__':
 
     # matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
 
-    # train_classifiers(spark, matrix)
+    train_classifiers(spark, matrix)

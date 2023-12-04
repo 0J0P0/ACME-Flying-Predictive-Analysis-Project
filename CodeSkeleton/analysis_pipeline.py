@@ -24,7 +24,7 @@ def training(data):
     Parameters
     ----------
     df : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the labels and aricraft, day and the average measurements of the 3453 sensor.
+        DataFrame with the FH, FC and DM KPIs, aswell as the label and aricraft, day and the average measurements of the 3453 sensor.
 
     Returns
     -------
@@ -32,7 +32,7 @@ def training(data):
         List of trained classifiers.
     """
     # Train a decision tree classifier from ml
-    dt = DecisionTreeClassifier(labelCol="labels", featuresCol="features")
+    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 
     print("Optimizing Decision Tree Classifier...")
     # Create a pipeline with the DecisionTreeClassifier
@@ -45,7 +45,7 @@ def training(data):
         .build()
 
     # Define the evaluator that will be used to evaluate the performance of the model, in this case the accuracy
-    evaluator = MulticlassClassificationEvaluator(labelCol="labels", predictionCol="prediction", metricName="accuracy")
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 
     # Create the CrossValidator with a given number of folds
     crossval = CrossValidator(estimator=pipeline,
@@ -67,7 +67,7 @@ def training(data):
     print("Best Max Bins: ", bestModel.stages[0].getMaxBins())
 
     # Train a random forest classifier from ml
-    rf = RandomForestClassifier(labelCol="labels", featuresCol="features")
+    rf = RandomForestClassifier(labelCol="label", featuresCol="features")
 
     print("Optimizing Random Forest Classifier...")
 
@@ -83,7 +83,7 @@ def training(data):
     
     # Define the evaluator that will be used to evaluate the performance of the model, in this case the accuracy
 
-    evaluator = MulticlassClassificationEvaluator(labelCol="labels", predictionCol="prediction", metricName="accuracy")
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 
     # Create the CrossValidator with a smaller number of folds
 
@@ -106,44 +106,43 @@ def training(data):
     return models
 
 
-def format_data(data: DataFrame) -> DataFrame:
+def format_matrix(matrix: DataFrame) -> DataFrame:
     """ 
-    Formats the data for training. 
+    Formats the matrix for training. 
 
     Parameters
     ----------
-    data : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the labels and aricraft, day and the average measurements of the 3453 sensor.
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs, aswell as the label and aricraft, day and the average measurements of the 3453 sensor.
     
     Returns
     -------
-    data : pyspark.sql.DataFrame
-        DataFrame with the formatted data.
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the formatted matrix.
     """
 
-    data = data.withColumn("avg_sensor", col("avg_sensor").cast("float")) \
-        .withColumn("flighthours", col("flighthours").cast("float")) \
-        .withColumn("flightcycles", col("flightcycles").cast("float")) \
-        .withColumn("delayedminutes", col("delayedminutes").cast("float"))
+    matrix = matrix.withColumn('avg_sensor', col('avg_sensor').cast('float')) \
+        .withColumn('flighthours', col('flighthours').cast('float')) \
+        .withColumn('flightcycles', col('flightcycles').cast('float')) \
+        .withColumn('delayedminutes', col('delayedminutes').cast('float'))
 
     # # 2. StringIndexer for converting categorical variables to numerical ones
-    indexers = [StringIndexer(inputCol="aircraft id", outputCol="aircraft_id", handleInvalid="skip"),
-                StringIndexer(inputCol="day", outputCol="day_id", handleInvalid="skip"),
-                StringIndexer(inputCol="kind", outputCol="labels")]
+    indexers = [StringIndexer(inputCol='aircraft id', outputCol='aircraft_id', handleInvalid='skip'),
+                StringIndexer(inputCol='date', outputCol='day_id', handleInvalid='skip')]
 
-    # indexers = [StringIndexer(inputCol="kind", outputCol="labels")]
+    # indexers = [StringIndexer(inputCol='kind', outputCol='label')]
 
     pipeline = Pipeline(stages=indexers)
-    data = pipeline.fit(data).transform(data)
+    matrix = pipeline.fit(matrix).transform(matrix)
 
     # 3. Assemble feature vector
-    assembler = VectorAssembler(inputCols=["aircraft_id", "day_id", "avg_sensor", "flighthours", "flightcycles", "delayedminutes"], outputCol="features")
-    data = assembler.transform(data)
+    assembler = VectorAssembler(inputCols=['aircraft_id', 'day_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
+    matrix = assembler.transform(matrix)
 
     # 4. Select relevant columns (features and label)
-    data = data.select("features", "labels")
+    matrix = matrix.select('features', 'label')
 
-    return data
+    return matrix
 
 
 def evaluate_classifiers(classifiers: list, test):
@@ -168,14 +167,14 @@ def evaluate_classifiers(classifiers: list, test):
     # Evaluate classifiers
     for classifier in classifiers:
         predictions = classifier.transform(test)
-        evaluator_acc = MulticlassClassificationEvaluator(labelCol="labels",
+        evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
                                                       predictionCol="prediction",
                                                       metricName="accuracy")
         accuracy = evaluator_acc.evaluate(predictions)
         
         print("Accuracy for classifier: ", accuracy)
 
-        evaluator_rec = MulticlassClassificationEvaluator(labelCol="labels",
+        evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
                                                       predictionCol="prediction",
                                                       metricName="accuracy")
         recall = evaluator_rec.evaluate(predictions)
@@ -192,7 +191,7 @@ def evaluate_classifiers(classifiers: list, test):
     return best_classifier
 
 
-def train_classifiers(spark: SparkSession, df):
+def train_classifiers(spark: SparkSession, matrix):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -200,8 +199,8 @@ def train_classifiers(spark: SparkSession, df):
     ----------
     spark : SparkSession
         SparkSession object.
-    df : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the labels and the average measurements of the 3453 sensor.
+    matrix : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs, aswell as the label and the average measurements of the 3453 sensor.
 
     Returns
      The trained classifiers, making a differenciation of the one with the best performance.
@@ -209,17 +208,16 @@ def train_classifiers(spark: SparkSession, df):
     None
     """
 
-    # #Transform the data to the format needed for training
-    df = format_data(df)
+    matrix = format_matrix(matrix)
 
-    # print('-'*50)
-    # print(df.dtypes)
-    # print('-'*50)
-    # print(df.show())
-    # print('-'*50)
+    print('-'*50)
+    print(matrix.dtypes)
+    print('-'*50)
+    print(matrix.show())
+    print('-'*50)
 
-    # Do the train and test split of df
-    train, test = df.randomSplit([0.8, 0.2], seed=42)
+    # Do the train and test split of matrix
+    train, test = matrix.randomSplit([0.8, 0.2], seed=42)
 
     # Train classifiers
     classifiers = training(train)
