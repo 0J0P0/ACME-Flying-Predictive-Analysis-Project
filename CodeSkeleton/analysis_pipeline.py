@@ -7,11 +7,8 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 - Save classifiers
 """
 
-
-import os
 from colorama import Fore
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
+from pyspark.sql import SparkSession
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
@@ -19,6 +16,7 @@ from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col
+
 
 def training(data):
     """
@@ -108,7 +106,6 @@ def training(data):
 
     return models
 
-    
 
 def format_data(data):
     """ 
@@ -142,6 +139,7 @@ def format_data(data):
     data = data.select("features", "labels")
 
     return data
+
 
 def evaluate_classifiers(classifiers: list, test):
     """
@@ -187,6 +185,7 @@ def evaluate_classifiers(classifiers: list, test):
     print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
 
     return best_classifier
+
 
 def train_classifiers(spark: SparkSession, df):
     """
