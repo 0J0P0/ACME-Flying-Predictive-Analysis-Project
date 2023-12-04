@@ -41,7 +41,7 @@ import os
 from colorama import Fore
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
-from pyspark.sql.functions import avg, sum, lit, date_format, to_date, substring
+from pyspark.sql.functions import avg, sum, lit, to_date, col
 
 
 ##############################################################################################################
@@ -59,7 +59,7 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['day'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
     # make a lef join of matrix with labels, conserving all the rows of labels
-    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['date']), how='left').drop('aircraftregistration', 'date')
+    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['day'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),
@@ -102,12 +102,14 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
-    df = data.withColumn('date',
-                         date_format(to_date(substring('flightid', 1, 6), 'ddMMyy'),'yyyy-MM-dd'))
+    df = data.select('aircraftregistration', 'starttime').distinct()
 
-    df = df.groupBy('date', 'aircraftregistration').agg(lit('Maintenance').alias('kind'))
+    data = data.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
-    return df.orderBy('aircraftregistration', 'date')
+    df = df.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('kind'))
+
+    # return df.orderBy('aircraftregistration', 'date')
+    return df
 
 
 def extract_dw_data(spark: SparkSession, dbw_properties: dict):
