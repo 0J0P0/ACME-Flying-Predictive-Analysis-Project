@@ -61,20 +61,23 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     # make a lef join of matrix with labels, conserving all the rows of labels
     matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
+    # rows with missing values in the label column are filled with 'No Maintenance'
+    matrix2 = matrix2.fillna('No Maintenance', subset=['kind'])
+
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),
         StructField("date", StringType(), True),
         StructField("avg_sensor", DoubleType(), True),
         StructField("flighthours", DoubleType(), True),
         StructField("flightcycles", IntegerType(), True),
-        StructField("delayedminutes", DoubleType(), True),
+        StructField("delayedminutes", IntegerType(), True),
         StructField("kind", StringType(), True)
     ])
 
     matrix2 = matrix2.withColumn('avg_sensor', matrix2['avg_sensor'].cast(DoubleType())) \
                         .withColumn('flighthours', matrix2['flighthours'].cast(DoubleType())) \
                         .withColumn('flightcycles', matrix2['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(DoubleType()))
+                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(IntegerType()))
     
     matrix2 = spark.createDataFrame(data=matrix2.rdd, schema=newSchema, verifySchema=True)
 
