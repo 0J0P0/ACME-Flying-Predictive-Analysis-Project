@@ -79,7 +79,6 @@ def training(data):
         List of trained classifiers.
     """
     
-    # Train a decision tree classifier from ml
     dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 
     print("Optimizing Decision Tree Classifier...")
