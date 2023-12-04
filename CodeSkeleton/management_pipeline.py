@@ -77,7 +77,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
-    # matrix.fillna('No Maintenance', subset=['label'])
+    # matrix.fillna(0, subset=['label'])
 
     matrix = matrix.toPandas()
     labels = labels.toPandas()
@@ -90,9 +90,9 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
             seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
 
             if seven_day_label.empty:
-                matrix.at[i, 'label'] = 'No Maintenance'
+                matrix.at[i, 'label'] = 0
             else:
-                matrix.at[i, 'label'] = 'Maintenance'
+                matrix.at[i, 'label'] = 1
 
     matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
@@ -142,7 +142,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
 
     labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
-    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit('Maintenance').alias('label'))
+    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
     
     # return labels.orderBy('aircraftregistration', 'date')
     return labels
