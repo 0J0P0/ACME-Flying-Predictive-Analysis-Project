@@ -75,12 +75,10 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    # make a lef join of matrix with labels, conserving all the rows of labels
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
-    labels = labels.orderBy('aircraftregistration', 'starttime')
+    # matrix.fillna('No Maintenance', subset=['label'])
 
-    # iterate over matrix and labels to fill the missing labels
     matrix = matrix.toPandas()
     labels = labels.toPandas()
 
