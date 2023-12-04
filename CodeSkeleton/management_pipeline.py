@@ -59,10 +59,10 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
     # make a lef join of matrix with labels, conserving all the rows of labels
-    matrix2 = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
+    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
 
     # rows with missing values in the label column are filled with 'No Maintenance'
-    matrix2 = matrix2.fillna('No Maintenance', subset=['kind'])
+    matrix = matrix.fillna('No Maintenance', subset=['kind'])
 
     newSchema = StructType([
         StructField("aircraft id", StringType(), True),
@@ -74,14 +74,14 @@ def join_dataframes(spark: SparkSession, sensor_data, kpis, labels):
         StructField("kind", StringType(), True)
     ])
 
-    matrix2 = matrix2.withColumn('avg_sensor', matrix2['avg_sensor'].cast(DoubleType())) \
-                        .withColumn('flighthours', matrix2['flighthours'].cast(DoubleType())) \
-                        .withColumn('flightcycles', matrix2['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix2['delayedminutes'].cast(IntegerType()))
+    matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
+                        .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
+                        .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
+                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType()))
     
-    matrix2 = spark.createDataFrame(data=matrix2.rdd, schema=newSchema, verifySchema=True)
+    matrix = spark.createDataFrame(data=matrix.rdd, schema=newSchema, verifySchema=True)
 
-    return matrix.orderBy('aircraft id', 'date'), matrix2.orderBy('aircraft id', 'date')
+    return matrix.orderBy('aircraft id', 'date')
 
 
 def extract_labels(spark: SparkSession, damos_properties: dict):
@@ -165,13 +165,13 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
             
             df_list.append(df)
 
-    combined_df = df_list[0]
+    sensors = df_list[0]
     for i in range(1, len(df_list)):
-        combined_df = combined_df.union(df_list[i])
+        sensors = sensors.union(df_list[i])
 
-    result_df = combined_df.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
+    sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
-    return result_df
+    return sensors
 
 
 
@@ -201,7 +201,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     # suponemos que las fechas de los ficheros csv son las de los vuelos
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
-    print(sensor_data.count())
+    # print(sensor_data.count())
     
     print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
     kpis = extract_dw_data(spark, dbw_properties)
@@ -212,7 +212,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     labels = extract_labels(spark, damos_properties)
     # print(labels.count())
 
-    matrix, matrix2 = join_dataframes(spark, sensor_data, kpis, labels)
+    matrix = join_dataframes(spark, sensor_data, kpis, labels)
     print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    return matrix2
+    return matrix
