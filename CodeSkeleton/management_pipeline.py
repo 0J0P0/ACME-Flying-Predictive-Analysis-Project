@@ -84,7 +84,6 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix['date'] = pd.to_datetime(matrix['date'])
     labels['starttime'] = pd.to_datetime(labels['starttime'])
-    print(matrix.head(2))
 
     for i, row in matrix.iterrows():
         if row['label'] == None:
