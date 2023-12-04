@@ -109,8 +109,8 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
                         .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
                         .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
-                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType()) \
-                        .withColumn('label', matrix['label'].cast(IntegerType())))
+                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
+                        .withColumn('label', matrix['label'].cast(IntegerType()))
     
     matrix = spark.createDataFrame(data=matrix.rdd, schema=newSchema, verifySchema=True)
 
