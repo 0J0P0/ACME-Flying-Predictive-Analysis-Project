@@ -10,6 +10,7 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 from colorama import Fore
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col
+from pyspark.sql.types import DoubleType, IntegerType
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
@@ -121,14 +122,15 @@ def format_matrix(matrix: DataFrame) -> DataFrame:
         DataFrame with the formatted matrix.
     """
 
-    matrix = matrix.withColumn('avg_sensor', col('avg_sensor').cast('float')) \
-        .withColumn('flighthours', col('flighthours').cast('float')) \
-        .withColumn('flightcycles', col('flightcycles').cast('float')) \
-        .withColumn('delayedminutes', col('delayedminutes').cast('float'))
+    matrix = matrix.withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
+                        .withColumn('flighthours', matrix['flighthours'].cast(DoubleType())) \
+                        .withColumn('flightcycles', matrix['flightcycles'].cast(IntegerType())) \
+                        .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
+                        .withColumn('label', matrix['label'].cast(IntegerType()))
 
     # # 2. StringIndexer for converting categorical variables to numerical ones
     indexers = [StringIndexer(inputCol='aircraft id', outputCol='aircraft_id', handleInvalid='skip'),
-                StringIndexer(inputCol='date', outputCol='day_id', handleInvalid='skip')]
+                StringIndexer(inputCol='date', outputCol='date_id', handleInvalid='skip')]
 
     # indexers = [StringIndexer(inputCol='kind', outputCol='label')]
 
@@ -136,7 +138,7 @@ def format_matrix(matrix: DataFrame) -> DataFrame:
     matrix = pipeline.fit(matrix).transform(matrix)
 
     # 3. Assemble feature vector
-    assembler = VectorAssembler(inputCols=['aircraft_id', 'day_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
+    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
     matrix = assembler.transform(matrix)
 
     # 4. Select relevant columns (features and label)
