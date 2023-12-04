@@ -102,7 +102,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict):
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
-    df = data.select('aircraftregistration', 'starttime').distinct()
+    # df = data.select('aircraftregistration', 'starttime').distinct()
 
     data = data.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
 
