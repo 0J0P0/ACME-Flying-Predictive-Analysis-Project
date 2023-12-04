@@ -8,14 +8,13 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 """
 
 from colorama import Fore
+from pyspark.ml import Pipeline
 from pyspark.sql import SparkSession
-from pyspark.ml import Pipeline
-from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
-from pyspark.ml.feature import StringIndexer, VectorAssembler
-from pyspark.ml import Pipeline
 from pyspark.sql.functions import col
+from pyspark.ml.feature import StringIndexer, VectorAssembler
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 
 
 def training(data):
