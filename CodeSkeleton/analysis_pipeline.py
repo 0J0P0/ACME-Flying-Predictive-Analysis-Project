@@ -9,8 +9,8 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 
 from colorama import Fore
 from pyspark.ml import Pipeline
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
@@ -106,19 +106,25 @@ def training(data):
     return models
 
 
-def format_data(data):
+def format_data(data: DataFrame) -> DataFrame:
     """ 
-    Formats the data for training.
+    Formats the data for training. 
+
+    Parameters
+    ----------
+    data : pyspark.sql.DataFrame
+        DataFrame with the FH, FC and DM KPIs, aswell as the labels and aricraft, day and the average measurements of the 3453 sensor.
+    
+    Returns
+    -------
+    data : pyspark.sql.DataFrame
+        DataFrame with the formatted data.
     """
 
-    # 1. Convert 'day' to a numerical representation
-    # data = data.withColumn("day", col("day").cast("string"))
-    # data = data.withColumn("aircraft id", col("aircraft id").cast("string"))
-    # data = data.withColumn("kind", col("kind").cast("string"))
-    data = data.withColumn("avg_sensor", col("avg_sensor").cast("float"))
-    data = data.withColumn("flighthours", col("flighthours").cast("float"))
-    data = data.withColumn("flightcycles", col("flightcycles").cast("float"))
-    data = data.withColumn("delayedminutes", col("delayedminutes").cast("float"))
+    data = data.withColumn("avg_sensor", col("avg_sensor").cast("float")) \
+        .withColumn("flighthours", col("flighthours").cast("float")) \
+        .withColumn("flightcycles", col("flightcycles").cast("float")) \
+        .withColumn("delayedminutes", col("delayedminutes").cast("float"))
 
     # # 2. StringIndexer for converting categorical variables to numerical ones
     indexers = [StringIndexer(inputCol="aircraft id", outputCol="aircraft_id", handleInvalid="skip"),
