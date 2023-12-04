@@ -155,21 +155,20 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
             aircraft_id = flight[4] + '-' + flight[5].split('.')[0]
 
             df = df.withColumn('aircraft id', lit(aircraft_id))
-            df.write.csv(filepath + '' + filename, header=True)
+            df.write.csv(filepath + 'mod/' + filename, header=True)
 
     # read all the csv files
     df = spark.read.csv(filepath, header=True)
 
     # select only the columns we want
-    df = df.select('date', 'value')
+    df = df.select('aircraft id', 'date', 'value')
 
     # # cast the columns to the correct types
     # df = df.withColumn('date', df['date'].cast(StringType())) \
     #         .withColumn('value', df['value'].cast(DoubleType()))
 
     # group by aircraft id and date and calculate the average of the value sensor
-    df = df.groupBy('date').agg(avg('value').alias('avg_sensor'))
-
+    df = df.groupBy('aircraft id', 'date').agg(avg('value').alias('avg_sensor'))
     # return df.orderBy('date')
 
     # for filename in os.listdir(filepath):
@@ -190,7 +189,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession):
     # print(sensor_data.count())
     # print(sensor_data.show())
 
-    return sensor_data
+    return df
 
 
 def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict):
