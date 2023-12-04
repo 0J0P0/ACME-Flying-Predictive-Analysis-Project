@@ -243,10 +243,11 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         Matrix with the gathered data.
     """
 
-    if os.path.exists('./resources/matrix'):
-        return spark.read.csv('./resources/matrix', header=True)
-
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Managment Pipeline{Fore.RESET}')
+    
+    if os.path.exists('./resources/matrix'):
+        print(f'{Fore.GREEN}End of the Managment Pipeline{Fore.RESET}' + '\n' + '-'*50)
+        return spark.read.csv('./resources/matrix', header=True)
 
     print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
     sensor_data = extract_sensor_data(filepath, spark)
