@@ -152,6 +152,7 @@ def training(data):
 
     return models
 
+
 def format_dataa(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
