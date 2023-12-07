@@ -7,6 +7,7 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 - Save classifiers
 """
 
+import mlflow
 from colorama import Fore
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col
@@ -47,9 +48,10 @@ def evaluate_classifiers(classifiers: list, test):
         
         print("Accuracy for classifier: ", accuracy)
 
+        #weighted to take into account the imbalance of classes
         evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
                                                       predictionCol="prediction",
-                                                      metricName="accuracy")
+                                                      metricName="weightedRecall")
         recall = evaluator_rec.evaluate(predictions)
         
         print("Recall for classifier: ", recall)
@@ -78,7 +80,7 @@ def training(data):
     classifiers : list
         List of trained classifiers.
     """
-    
+
     dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 
     print("Optimizing Decision Tree Classifier...")
@@ -105,6 +107,7 @@ def training(data):
 
     # Get the best model from cross-validation
     bestModel= cvModel.bestModel
+
 
     models = [bestModel]
 
@@ -199,11 +202,28 @@ def train_classifiers(matrix: DataFrame):
     """
 
     matrix = format_dataa(matrix)
+    experiment_name = "TrainClassifiers"
+    mlflow.set_experiment(experiment_name)
 
     train, test = matrix.randomSplit([0.8, 0.2], seed=42)
 
-    classifiers = training(train)
-
+    with mlflow.start_run():
+        classifiers = training(train)
+        for classifier in classifiers:
+            mlflow.spark.log_model(classifier, "model_" + classifier.stages[0].__class__.__name__
+                                   , registered_model_name="model_" + classifier.stages[0].__class__.__name__)
+            mlflow.log_params({"num_features" : len(train.columns)-1})
+            evaluator1 = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+            accuracy = evaluator1.evaluate(classifier.transform(test))
+            mlflow.log_metrics({"accuracy": accuracy})
+            #weighted recall to take into account the imbalance of classes
+            evaluator2 = MulticlassClassificationEvaluator(labelCol="label",
+                                                      predictionCol="prediction",
+                                                      metricName="weightedRecall")
+            recall = evaluator2.evaluate(classifier.transform(test))
+            mlflow.log_metrics({"recall": recall})
+            mlflow.spark.save_model(classifier, "model_" + classifier.stages[0].__class__.__name__)
+        mlflow.end_run()
     best_classifier = evaluate_classifiers(classifiers, test)
 
     # print(best_classifier)

@@ -9,8 +9,8 @@ from analysis_pipeline import train_classifiers
 
 HADOOP_HOME = './resources/hadoop_home'
 JDBC_JAR = './resources/postgresql-42.2.8.jar'
-PYSPARK_PYTHON = 'python3.11'
-PYSPARK_DRIVER_PYTHON = 'python3.11'
+PYSPARK_PYTHON = 'python3.10'
+PYSPARK_DRIVER_PYTHON = 'python3.10'
 
 
 if __name__== '__main__':
