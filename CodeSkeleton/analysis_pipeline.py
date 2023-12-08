@@ -9,17 +9,15 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 
 import mlflow
 from colorama import Fore
-from pyspark.ml import Pipeline
-from pyspark.sql.functions import col
-from pyspark.sql.types import DoubleType, IntegerType
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame
+from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 
 
-def evaluate_classifiers(classifiers: list, test):
+def evaluate_classifiers(classifiers: list, test: DataFrame):
     """
     Evaluates the classifiers.
 
@@ -66,114 +64,54 @@ def evaluate_classifiers(classifiers: list, test):
     return best_classifier
 
 
-def evaluate_and_log_metrics(classifier, test):
+def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     """
     ...
     """
 
-    evaluator1 = MulticlassClassificationEvaluator(
-        labelCol="label", predictionCol="prediction", metricName="accuracy"
-    )
-    accuracy = evaluator1.evaluate(classifier.transform(test))
-    mlflow.log_metrics({"accuracy": accuracy})
+    evaluator1 = MulticlassClassificationEvaluator(labelCol='label',
+                                                   predictionCol='prediction',
+                                                   metricName='accuracy')
+    
+    acc = evaluator1.evaluate(classifier.transform(test))
+    mlflow.log_metrics({'accuracy': acc})
 
-    evaluator2 = MulticlassClassificationEvaluator(labelCol="label",
-                                                   predictionCol="prediction",
-                                                   metricName="weightedRecall")
+    evaluator2 = MulticlassClassificationEvaluator(labelCol='label',
+                                                   predictionCol='prediction',
+                                                   metricName='weightedRecall')
     
     recall = evaluator2.evaluate(classifier.transform(test))
-    
-    mlflow.log_metrics({"recall": recall})
+    mlflow.log_metrics({'recall': recall})
 
 
-def training(data):
+def train_model(data:DataFrame, models: list, k: int = 3) -> list:
     """
-    Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
-
-    Parameters
-    ----------
-    df : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the label and aricraft, day and the average measurements of the 3453 sensor.
-
-    Returns
-    -------
-    classifiers : list
-        List of trained classifiers.
+    ---
     """
 
-    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
+    classifiers = []
 
-    print("Optimizing Decision Tree Classifier...")
-    # Create a pipeline with the DecisionTreeClassifier
-    pipeline = Pipeline(stages=[dt])
+    for m in models:
+        print(f'{Fore.YELLOW}Training {m.__class__.__name__}...{Fore.RESET}')
 
-    # Define the parameter grid, to adjust the maxDepth and maxBins of the DecisionTreeClassifier
-    paramGrid = ParamGridBuilder() \
-        .addGrid(dt.maxDepth, [5, 10, 15]) \
-        .addGrid(dt.maxBins, [120, 140, 160]) \
-        .build()
+        pipeline = Pipeline(stages=[m])
 
-    # Define the evaluator that will be used to evaluate the performance of the model, in this case the accuracy
-    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+        paramGrid = ParamGridBuilder() \
+            .addGrid(m.maxDepth, [5, 10, 15]) \
+            .addGrid(m.maxBins, [120, 140, 160]) \
+            .build()
+        
+        evaluator = MulticlassClassificationEvaluator(labelCol='label',
+                                                      predictionCol='prediction',
+                                                      metricName='accuracy')
 
-    # Create the CrossValidator with a given number of folds
-    crossval = CrossValidator(estimator=pipeline,
-                            estimatorParamMaps=paramGrid,
-                            evaluator=evaluator,
-                            numFolds=3)  # You might consider increasing this based on the size of your dataset
+        cv = CrossValidator(estimator=pipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=k)
+        
+        cvModel = cv.fit(data)
 
-    # Run cross-validation and choose the best set of parameters
-    cvModel = crossval.fit(data)
+        classifiers.append(cvModel.bestModel)
 
-    # Get the best model from cross-validation
-    bestModel= cvModel.bestModel
-
-
-    models = [bestModel]
-
-    print("Training complete!")
-    # Print the best parameters
-    print("Best Max Depth: ", bestModel.stages[0].getMaxDepth())
-    print("Best Max Bins: ", bestModel.stages[0].getMaxBins())
-
-    # Train a random forest classifier from ml
-    rf = RandomForestClassifier(labelCol="label", featuresCol="features")
-
-    print("Optimizing Random Forest Classifier...")
-
-    # Create a pipeline with the RandomForestClassifier
-    pipeline = Pipeline(stages=[rf])
-
-    # Define the parameter grid, to adjust the maxDepth and maxBins of the RandomForestClassifier
-
-    paramGrid = ParamGridBuilder() \
-        .addGrid(rf.maxDepth, [5, 10, 15]) \
-        .addGrid(rf.maxBins, [120, 140, 160]) \
-        .build()
-    
-    # Define the evaluator that will be used to evaluate the performance of the model, in this case the accuracy
-
-    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
-
-    # Create the CrossValidator with a smaller number of folds
-
-    # Create the CrossValidator with a given number of folds
-    crossval = CrossValidator(estimator=pipeline,
-                            estimatorParamMaps=paramGrid,
-                            evaluator=evaluator,
-                            numFolds=3)  # You might consider increasing this based on the size of your dataset
-    
-    # Run cross-validation and choose the best set of parameters
-
-    cvModel = crossval.fit(data)
-
-    # Get the best model from cross-validation
-
-    bestModel= cvModel.bestModel
-
-    models.append(bestModel)
-
-    return models
+    return classifiers
 
 
 def format_data(matrix: DataFrame) -> DataFrame:
@@ -208,7 +146,7 @@ def format_data(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label'), num_features
 
 
-def analysis_pipe(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
+def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers'):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -231,14 +169,21 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
     train, test = matrix.randomSplit([0.8, 0.2], seed=42)
 
     with mlflow.start_run():
-        classifiers = training(train)
-        for classifier in classifiers:
-            model_name = "model_" + classifier.stages[0].__class__.__name__
-            mlflow.spark.log_model(classifier, model_name)
-            mlflow.log_params({"num_features": num_features})
-            evaluate_and_log_metrics(classifier, test)
-            mlflow.spark.save_model(classifier, model_name)
+
+        models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
+                  RandomForestClassifier(labelCol='label', featuresCol='features')]
+
+        classifiers = train_model(train, models, 3)
+
+        for c in classifiers:
+            model_name = c.stages[0].__class__.__name__
+            
+            mlflow.spark.log_model(c, model_name)
+            mlflow.log_params({'num_features': num_features})
+            
+            evaluate_and_log_metrics(c, test)
+            mlflow.spark.save_model(c, model_name)
 
     mlflow.end_run()
 
-    best_classifier = evaluate_classifiers(classifiers, test)
+    # best_classifier = evaluate_classifiers(classifiers, test)

@@ -19,7 +19,7 @@ if __name__== '__main__':
     os.environ['PYSPARK_PYTHON'] = PYSPARK_PYTHON
     os.environ['PYSPARK_DRIVER_PYTHON'] = PYSPARK_DRIVER_PYTHON
 
-    conf = SparkConf()  # create the configuration
+    conf = SparkConf()
     conf.set('spark.master', 'local')
     conf.set('spark.app.name','DBALab')
     conf.set('spark.jars', JDBC_JAR)
