@@ -275,4 +275,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         matrix.write.csv('./resources/matrix', header=True)
         # print(2)
 
+        matrix = spark.read.csv('./resources/matrix', header=True)
+        matrix = format_matrix(matrix)
+
     return matrix
