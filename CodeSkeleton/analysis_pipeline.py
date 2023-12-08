@@ -171,7 +171,7 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
                   RandomForestClassifier(labelCol='label', featuresCol='features')]
 
-        classifiers = train_model(train, models, 6)
+        classifiers = train_model(train, models, 3)
 
         for c in classifiers:
             # model_name = c.stages[0].__class__.__name__
