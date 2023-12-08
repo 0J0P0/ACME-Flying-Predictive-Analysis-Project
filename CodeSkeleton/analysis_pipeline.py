@@ -156,6 +156,20 @@ def training(data):
     return models
 
 
+def evaluate_and_log_metrics(classifier, test):
+    evaluator1 = MulticlassClassificationEvaluator(
+        labelCol="label", predictionCol="prediction", metricName="accuracy"
+    )
+    accuracy = evaluator1.evaluate(classifier.transform(test))
+    mlflow.log_metrics({"accuracy": accuracy})
+
+    evaluator2 = MulticlassClassificationEvaluator(
+        labelCol="label", predictionCol="prediction", metricName="weightedRecall"
+    )
+    recall = evaluator2.evaluate(classifier.transform(test))
+    mlflow.log_metrics({"recall": recall})
+
+
 def format_data(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
@@ -186,20 +200,6 @@ def format_data(matrix: DataFrame) -> DataFrame:
     
     # print(matrix.select('features', 'label').show(5))
     return matrix.select('features', 'label'), num_features
-
-
-def evaluate_and_log_metrics(classifier, test):
-    evaluator1 = MulticlassClassificationEvaluator(
-        labelCol="label", predictionCol="prediction", metricName="accuracy"
-    )
-    accuracy = evaluator1.evaluate(classifier.transform(test))
-    mlflow.log_metrics({"accuracy": accuracy})
-
-    evaluator2 = MulticlassClassificationEvaluator(
-        labelCol="label", predictionCol="prediction", metricName="weightedRecall"
-    )
-    recall = evaluator2.evaluate(classifier.transform(test))
-    mlflow.log_metrics({"recall": recall})
 
 
 def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
