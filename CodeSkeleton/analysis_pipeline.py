@@ -108,7 +108,7 @@ def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
         cv = CrossValidator(estimator=m, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=k, seed=s)
         
         cvModel = cv.fit(data)
-
+        
         classifiers.append(cvModel.bestModel)
 
     return classifiers

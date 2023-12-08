@@ -98,29 +98,29 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     matrix : pyspark.sql.DataFrame
         DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
     """
-
+    
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), how='left').drop('aircraftregistration', 'starttime')
+    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')
 
-    # matrix.fillna(0, subset=['label'])
+    matrix = matrix.fillna(0, subset=['label'])
 
-    matrix = matrix.toPandas()
-    labels = labels.toPandas()
+    # matrix = matrix.toPandas()
+    # labels = labels.toPandas()
 
-    matrix['date'] = pd.to_datetime(matrix['date'])
-    labels['starttime'] = pd.to_datetime(labels['starttime'])
+    # matrix['date'] = pd.to_datetime(matrix['date'])
+    # labels['starttime'] = pd.to_datetime(labels['starttime'])
 
-    for i, row in matrix.iterrows():
-        if row['label'] == None:
-            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
+    # for i, row in matrix.iterrows():
+    #     if row['label'] == None:
+    #         seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
 
-            if seven_day_label.empty:
-                matrix.at[i, 'label'] = 0
-            else:
-                matrix.at[i, 'label'] = 1
+    #         if seven_day_label.empty:
+    #             matrix.at[i, 'label'] = 0
+    #         else:
+    #             matrix.at[i, 'label'] = 1
 
-    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
+    # matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
     return format_matrix(matrix)
 
@@ -251,6 +251,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         Matrix with the gathered data.
     """
     
+    # si se ejecuta por primera vez salen waRNING
+
     if os.path.exists('./resources/matrix'):
         matrix = spark.read.csv('./resources/matrix', header=True)
         matrix = format_matrix(matrix)
@@ -269,6 +271,8 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
 
         matrix = join_dataframes(spark, sensor_data, kpis, labels)
 
+        # print(1)
         matrix.write.csv('./resources/matrix', header=True)
+        # print(2)
 
     return matrix
