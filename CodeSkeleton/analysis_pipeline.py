@@ -84,7 +84,7 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     mlflow.log_metrics({'recall': recall})
 
 
-def train_model(data:DataFrame, models: list, k: int = 3) -> list:
+def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
     """
     ---
     """
@@ -94,7 +94,7 @@ def train_model(data:DataFrame, models: list, k: int = 3) -> list:
     for m in models:
         print(f'{Fore.YELLOW}Training {m.__class__.__name__}...{Fore.RESET}')
 
-        pipeline = Pipeline(stages=[m])
+        # pipeline = Pipeline(stages=[m])  # es util el pipeline si solo hay un stage?
 
         paramGrid = ParamGridBuilder() \
             .addGrid(m.maxDepth, [5, 10, 15]) \
@@ -104,8 +104,8 @@ def train_model(data:DataFrame, models: list, k: int = 3) -> list:
         evaluator = MulticlassClassificationEvaluator(labelCol='label',
                                                       predictionCol='prediction',
                                                       metricName='accuracy')
-
-        cv = CrossValidator(estimator=pipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=k)
+        
+        cv = CrossValidator(estimator=m, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=k, seed=s)
         
         cvModel = cv.fit(data)
 
@@ -129,16 +129,14 @@ def format_data(matrix: DataFrame) -> DataFrame:
         DataFrame with the formatted matrix.
     """
 
-    indexers = [StringIndexer(inputCol='aircraft id', outputCol='aircraft_id', handleInvalid='skip'),
-                StringIndexer(inputCol='date', outputCol='date_id', handleInvalid='skip')]
-
-    pipeline = Pipeline(stages=indexers)
-    matrix = pipeline.fit(matrix).transform(matrix)
-
-    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'],
+    aircraftIndexer = StringIndexer(inputCol='aircraft id', outputCol='aircraft_id')
+    dateIndexer = StringIndexer(inputCol='date', outputCol='date_id')
+    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 
+                                           'flightcycles', 'delayedminutes'],
                                 outputCol='features')
-    
-    matrix = assembler.transform(matrix)
+
+    pipeline = Pipeline(stages=[aircraftIndexer, dateIndexer, assembler])
+    matrix = pipeline.fit(matrix).transform(matrix)
 
     num_features = len(matrix.select('features').first()[0])
     
@@ -146,7 +144,7 @@ def format_data(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label'), num_features
 
 
-def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers'):
+def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 42):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -166,17 +164,18 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers'):
     
     mlflow.set_experiment(experiment_name)
 
-    train, test = matrix.randomSplit([0.8, 0.2], seed=42)
+    train, test = matrix.randomSplit([0.8, 0.2], seed=s)
 
     with mlflow.start_run():
 
         models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
                   RandomForestClassifier(labelCol='label', featuresCol='features')]
 
-        classifiers = train_model(train, models, 3)
+        classifiers = train_model(train, models, 6)
 
         for c in classifiers:
-            model_name = c.stages[0].__class__.__name__
+            # model_name = c.stages[0].__class__.__name__
+            model_name = c.__class__.__name__
             
             mlflow.spark.log_model(c, model_name)
             mlflow.log_params({'num_features': num_features})
@@ -187,3 +186,4 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers'):
     mlflow.end_run()
 
     # best_classifier = evaluate_classifiers(classifiers, test)
+    # return best_classifier, classifiers
