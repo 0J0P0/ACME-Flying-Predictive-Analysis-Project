@@ -26,7 +26,7 @@ if __name__== '__main__':
 
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-    """ dbw_properties = {'driver': 'org.postgresql.Driver',
+    dbw_properties = {'driver': 'org.postgresql.Driver',
                  'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
                  'user': 'juan.pablo.zaldivar',
                  'password': 'DB021202'}
@@ -34,17 +34,17 @@ if __name__== '__main__':
     damos_properties = {'driver': 'org.postgresql.Driver',
                  'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
                  'user': 'juan.pablo.zaldivar',
-                 'password': 'DB021202'} """
+                 'password': 'DB021202'}
     
-    dbw_properties = {'driver': 'org.postgresql.Driver',
-                 'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
-                 'user': 'enric.millan.iglesias',
-                 'password': 'DB220303'}
+    # dbw_properties = {'driver': 'org.postgresql.Driver',
+    #              'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
+    #              'user': 'enric.millan.iglesias',
+    #              'password': 'DB220303'}
 
-    damos_properties = {'driver': 'org.postgresql.Driver',
-                 'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
-                 'user': 'enric.millan.iglesias',
-                 'password': 'DB220303'}
+    # damos_properties = {'driver': 'org.postgresql.Driver',
+    #              'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
+    #              'user': 'enric.millan.iglesias',
+    #              'password': 'DB220303'}
     
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')

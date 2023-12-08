@@ -177,14 +177,16 @@ def format_data(matrix: DataFrame) -> DataFrame:
     pipeline = Pipeline(stages=indexers)
     matrix = pipeline.fit(matrix).transform(matrix)
 
-    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'], outputCol='features')
+    assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes'],
+                                outputCol='features')
     
     matrix = assembler.transform(matrix)
 
     num_features = len(matrix.select('features').first()[0])
-    #print the features and the label
-    print(matrix.select('features', 'label').show(5))
+    
+    # print(matrix.select('features', 'label').show(5))
     return matrix.select('features', 'label'), num_features
+
 
 def evaluate_and_log_metrics(classifier, test):
     evaluator1 = MulticlassClassificationEvaluator(
@@ -198,6 +200,7 @@ def evaluate_and_log_metrics(classifier, test):
     )
     recall = evaluator2.evaluate(classifier.transform(test))
     mlflow.log_metrics({"recall": recall})
+
 
 def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
     """
@@ -214,6 +217,7 @@ def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifier
     -------
     None
     """
+  
     matrix, num_features = format_data(matrix)
     mlflow.set_experiment(experiment_name)
 
