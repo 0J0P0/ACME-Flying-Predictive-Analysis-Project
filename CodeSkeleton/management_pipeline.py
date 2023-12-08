@@ -251,8 +251,6 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         Matrix with the gathered data.
     """
     
-    # si se ejecuta por primera vez salen waRNING
-
     if os.path.exists('./resources/matrix'):
         matrix = spark.read.csv('./resources/matrix', header=True)
         matrix = format_matrix(matrix)
