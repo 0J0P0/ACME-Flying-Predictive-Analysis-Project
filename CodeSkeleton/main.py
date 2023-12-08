@@ -4,7 +4,7 @@ from colorama import Fore
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from management_pipeline import managment_pipe
-from analysis_pipeline import train_classifiers
+from analysis_pipeline import analysis_pipe
 
 
 HADOOP_HOME = './resources/hadoop_home'
@@ -53,6 +53,6 @@ if __name__== '__main__':
     
     print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
-    train_classifiers(matrix)
+    analysis_pipe(matrix)
     
     print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)

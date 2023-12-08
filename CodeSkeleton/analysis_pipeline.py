@@ -66,6 +66,26 @@ def evaluate_classifiers(classifiers: list, test):
     return best_classifier
 
 
+def evaluate_and_log_metrics(classifier, test):
+    """
+    ...
+    """
+
+    evaluator1 = MulticlassClassificationEvaluator(
+        labelCol="label", predictionCol="prediction", metricName="accuracy"
+    )
+    accuracy = evaluator1.evaluate(classifier.transform(test))
+    mlflow.log_metrics({"accuracy": accuracy})
+
+    evaluator2 = MulticlassClassificationEvaluator(labelCol="label",
+                                                   predictionCol="prediction",
+                                                   metricName="weightedRecall")
+    
+    recall = evaluator2.evaluate(classifier.transform(test))
+    
+    mlflow.log_metrics({"recall": recall})
+
+
 def training(data):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
@@ -156,20 +176,6 @@ def training(data):
     return models
 
 
-def evaluate_and_log_metrics(classifier, test):
-    evaluator1 = MulticlassClassificationEvaluator(
-        labelCol="label", predictionCol="prediction", metricName="accuracy"
-    )
-    accuracy = evaluator1.evaluate(classifier.transform(test))
-    mlflow.log_metrics({"accuracy": accuracy})
-
-    evaluator2 = MulticlassClassificationEvaluator(
-        labelCol="label", predictionCol="prediction", metricName="weightedRecall"
-    )
-    recall = evaluator2.evaluate(classifier.transform(test))
-    mlflow.log_metrics({"recall": recall})
-
-
 def format_data(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
@@ -202,7 +208,7 @@ def format_data(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label'), num_features
 
 
-def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
+def analysis_pipe(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -219,6 +225,7 @@ def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifier
     """
   
     matrix, num_features = format_data(matrix)
+    
     mlflow.set_experiment(experiment_name)
 
     train, test = matrix.randomSplit([0.8, 0.2], seed=42)
@@ -233,10 +240,5 @@ def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifier
             mlflow.spark.save_model(classifier, model_name)
 
     mlflow.end_run()
-    best_classifier = evaluate_classifiers(classifiers, test)
 
-    # print(best_classifier)
-    # # Save the classiers 
-    # best_classifier.write().overwrite().save("models/best_classifier")
-    # for classifier in classifiers:
-    #     classifier.write().overwrite().save("models/" + classifier.stages[0].__class__.__name__)
+    best_classifier = evaluate_classifiers(classifiers, test)
