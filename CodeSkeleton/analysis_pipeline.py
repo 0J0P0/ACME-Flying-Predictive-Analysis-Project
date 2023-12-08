@@ -156,7 +156,7 @@ def training(data):
     return models
 
 
-def format_dataa(matrix: DataFrame) -> DataFrame:
+def format_data(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
 
@@ -181,28 +181,40 @@ def format_dataa(matrix: DataFrame) -> DataFrame:
     
     matrix = assembler.transform(matrix)
 
-    return matrix.select('features', 'label')
+    num_features = len(matrix.select('features').first()[0])
+    #print the features and the label
+    print(matrix.select('features', 'label').show(5))
+    return matrix.select('features', 'label'), num_features
 
+def evaluate_and_log_metrics(classifier, test):
+    evaluator1 = MulticlassClassificationEvaluator(
+        labelCol="label", predictionCol="prediction", metricName="accuracy"
+    )
+    accuracy = evaluator1.evaluate(classifier.transform(test))
+    mlflow.log_metrics({"accuracy": accuracy})
 
-def train_classifiers(matrix: DataFrame):
+    evaluator2 = MulticlassClassificationEvaluator(
+        labelCol="label", predictionCol="prediction", metricName="weightedRecall"
+    )
+    recall = evaluator2.evaluate(classifier.transform(test))
+    mlflow.log_metrics({"recall": recall})
+
+def train_classifiers(matrix: DataFrame, experiment_name: str = "TrainClassifiers"):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
     Parameters
     ----------
-    spark : SparkSession
-        SparkSession object.
     matrix : pyspark.sql.DataFrame
-        DataFrame with the FH, FC and DM KPIs, aswell as the label and the average measurements of the 3453 sensor.
+        DataFrame with the FH, FC and DM KPIs, as well as the label and the average measurements of the 3453 sensor.
+    experiment_name : str, optional
+        Name of the MLflow experiment, by default "TrainClassifiers".
 
     Returns
-     The trained classifiers, making a differenciation of the one with the best performance.
     -------
     None
     """
-
-    matrix = format_dataa(matrix)
-    experiment_name = "TrainClassifiers"
+    matrix, num_features = format_data(matrix)
     mlflow.set_experiment(experiment_name)
 
     train, test = matrix.randomSplit([0.8, 0.2], seed=42)
@@ -210,20 +222,13 @@ def train_classifiers(matrix: DataFrame):
     with mlflow.start_run():
         classifiers = training(train)
         for classifier in classifiers:
-            mlflow.spark.log_model(classifier, "model_" + classifier.stages[0].__class__.__name__
-                                   , registered_model_name="model_" + classifier.stages[0].__class__.__name__)
-            mlflow.log_params({"num_features" : len(train.columns)-1})
-            evaluator1 = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
-            accuracy = evaluator1.evaluate(classifier.transform(test))
-            mlflow.log_metrics({"accuracy": accuracy})
-            #weighted recall to take into account the imbalance of classes
-            evaluator2 = MulticlassClassificationEvaluator(labelCol="label",
-                                                      predictionCol="prediction",
-                                                      metricName="weightedRecall")
-            recall = evaluator2.evaluate(classifier.transform(test))
-            mlflow.log_metrics({"recall": recall})
-            mlflow.spark.save_model(classifier, "model_" + classifier.stages[0].__class__.__name__)
-        mlflow.end_run()
+            model_name = "model_" + classifier.stages[0].__class__.__name__
+            mlflow.spark.log_model(classifier, model_name)
+            mlflow.log_params({"num_features": num_features})
+            evaluate_and_log_metrics(classifier, test)
+            mlflow.spark.save_model(classifier, model_name)
+
+    mlflow.end_run()
     best_classifier = evaluate_classifiers(classifiers, test)
 
     # print(best_classifier)
