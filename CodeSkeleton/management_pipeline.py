@@ -1,24 +1,10 @@
 ##############################################################################################################
 # Authors:      Enric Millan, Juan Pablo Zaldivar                                                            #
 #                                                                                                            #
-# Project:      Predictive Analysis Project                                                                  #
-#                                                                                                            #
-# Input:        - Path to the folder where the csv files are stored.                                         #
-#               - SparkSession object.                                                                       #
-#               - Dictionary with the properties to connect to the Data Warehouse.                           #
-#               - Dictionary with the properties to connect to the AMOS database.                            #
-#                                                                                                            #
-# Output:       - Matrix with the gathered data.                                                             #
+# Project:      Predictive Analysis Project - Managment Pipeline                                             #
 #                                                                                                            #
 # Usage:        Called from main.py.                                                                         #
-#                                                                                                            #
-# Requirements: - pyspark.sql                                                                                #
-#               - pyspark.sql.types                                                                          #
-#               - pyspark.sql.functions                                                                      #
-#               - os                                                                                         #
-#               - colorama                                                                                   #
-#                                                                                                            #
-#############################################################################################################
+##############################################################################################################
 
 
 """
@@ -36,7 +22,6 @@ This pipeline generates a matrix where the rows denote the information of an air
 #                                                                                                            #
 ##############################################################################################################
 
-
 import os
 import pandas as pd
 from colorama import Fore
@@ -44,13 +29,11 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 
-
 ##############################################################################################################
 #                                                                                                            #
 # Functions                                                                                                  #
 #                                                                                                            #
 ##############################################################################################################
-
 
 def format_matrix(matrix: DataFrame) -> DataFrame:
     """

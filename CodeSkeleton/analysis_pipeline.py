@@ -1,11 +1,26 @@
+##############################################################################################################
+# Authors:      Enric Millan, Juan Pablo Zaldivar                                                            #
+#                                                                                                            #
+# Project:      Predictive Analysis Project - Analysis Pipeline                                              #
+#                                                                                                            #
+# Usage:        Called from main.py.                                                                         #
+##############################################################################################################
+
+
 """
 This pipeline trains a set of classifiers to predict unscheduled maintenance for a given aircraft. The pipeline is composed of the following steps:
-- Train and test split
-- Format data for training
-- Train classifiers
-- Evaluate classifiers
-- Save classifiers
+
+    - Format the data.
+    - Train the classifiers.
+    - Evaluate the classifiers.
+    - Log the metrics.
 """
+
+##############################################################################################################
+#                                                                                                            #
+# Imports                                                                                                    #
+#                                                                                                            #
+##############################################################################################################
 
 import mlflow
 from colorama import Fore
@@ -16,6 +31,11 @@ from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 
+##############################################################################################################
+#                                                                                                            #
+# Functions                                                                                                  #
+#                                                                                                            #
+##############################################################################################################
 
 def evaluate_classifiers(classifiers: list, test: DataFrame):
     """
