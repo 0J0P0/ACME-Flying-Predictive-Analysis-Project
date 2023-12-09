@@ -187,3 +187,5 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
 
     # best_classifier = evaluate_classifiers(classifiers, test)
     # return best_classifier, classifiers
+
+    return classifiers[0], classifiers

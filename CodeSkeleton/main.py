@@ -5,6 +5,7 @@ from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from management_pipeline import managment_pipe
 from analysis_pipeline import analysis_pipe
+from classifier_pipeline import classifier_pipe
 
 
 HADOOP_HOME = './resources/hadoop_home'
@@ -53,6 +54,11 @@ if __name__== '__main__':
     
     print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
-    analysis_pipe(matrix)
+    model, _ = analysis_pipe(matrix)
     
-    print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
+
+    record = []
+    classifier_pipe(model, record)
+
+    print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
