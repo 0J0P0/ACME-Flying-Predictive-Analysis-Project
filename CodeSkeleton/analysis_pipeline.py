@@ -114,8 +114,6 @@ def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
     for m in models:
         print(f'{Fore.YELLOW}Training {m.__class__.__name__}...{Fore.RESET}')
 
-        # pipeline = Pipeline(stages=[m])  # es util el pipeline si solo hay un stage?
-
         paramGrid = ParamGridBuilder() \
             .addGrid(m.maxDepth, [5, 10, 15]) \
             .addGrid(m.maxBins, [120, 140, 160]) \
@@ -128,7 +126,6 @@ def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
         cv = CrossValidator(estimator=m, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=k, seed=s)
         
         cvModel = cv.fit(data)
-        
         classifiers.append(cvModel.bestModel)
 
     return classifiers

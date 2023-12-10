@@ -57,6 +57,7 @@ def extract_record(day, aircraft):
     record : pandas.DataFrame
         Record for the given day and aircraft.
     """
+    record = []
 
     return record
 
