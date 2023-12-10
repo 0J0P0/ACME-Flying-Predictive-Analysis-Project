@@ -26,7 +26,7 @@ import os
 import pandas as pd
 from colorama import Fore
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StringType, DoubleType, IntegerType
+from pyspark.sql.types import StringType, DoubleType, IntegerType, StructType, StructField
 from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 
 ##############################################################################################################
@@ -58,7 +58,7 @@ def format_columns(matrix: DataFrame) -> DataFrame:
         .withColumn('delayedminutes', matrix['delayedminutes'].cast(IntegerType())) \
         .withColumn('label', matrix['label'].cast(IntegerType()))
 
-    return matrix.orderBy('aircraft id', 'date')
+    return matrix
 
 
 def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) -> DataFrame:
@@ -86,7 +86,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')
 
-    matrix = matrix.fillna(0, subset=['label'])
+    # matrix = matrix.fillna(0, subset=['label'])
 
     matrix = matrix.toPandas()
     labels = labels.toPandas()
@@ -129,8 +129,8 @@ def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
-    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
     labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
+    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
     
     return labels
 
@@ -188,16 +188,25 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
 
     df_list = []
     all_files = os.listdir(filepath)
+
+    # empty_schema = StructType([
+    #     StructField('aircraft id', StringType(), True),
+    #     StructField('date', StringType(), True),
+    #     StructField('value', DoubleType(), True)
+    # ])
+    # sensors = spark.createDataFrame(data=[], schema=empty_schema)
     for file in all_files:
         if file.endswith('.csv'):
-            df = spark.read.option("header", "true").option("delimiter", ";").csv(filepath + file)
-            
             aircraft_id = extract_aircraft_id(file)
             
-            df = df.withColumn("aircraft id", lit(aircraft_id))
-            df = df.withColumn("date", substring("date", 1, 10))
+            df = spark.read.option('header', 'true').option('delimiter', ';').csv(filepath + file)
+            df = df.withColumn('date', substring('date', 1, 10))
+            df = df.withColumn('aircraft id', lit(aircraft_id))
+            df = df.select('aircraft id', 'date', 'value')
             
             df_list.append(df)
+
+            # sensors = sensors.union(df)
 
     sensors = df_list[0]
     for i in range(1, len(df_list)):
