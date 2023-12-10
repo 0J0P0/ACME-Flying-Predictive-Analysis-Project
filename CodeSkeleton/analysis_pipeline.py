@@ -13,7 +13,7 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
     - Format the data.
     - Train the classifiers.
     - Evaluate the classifiers.
-    - Log the metrics.
+    - Log the metrics and save the classifiers.
 """
 
 ##############################################################################################################
