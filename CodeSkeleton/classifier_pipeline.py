@@ -14,7 +14,7 @@ record and then uses the best model to classify the record in maintenance or no 
 The steps are the following:
 - Recieve an aircraft and a day.
 - Generate a record with that aircraft and day.
-- Format the record so ir can be used by the model.
+- Format the record so it can be used by the model.
 - Load the best model.
 - Make a prdiction with the record and the model.
 """
@@ -60,6 +60,7 @@ def extract_record(day, aircraft):
 
     return record
 
+
 def format_record(record):
     """
     Formats the record so it can be used by the model.
@@ -74,6 +75,7 @@ def format_record(record):
     record : pyspark.sql.DataFrame
         Formatted record.
     """
+
     aircraftIndexer = StringIndexer(inputCol='aircraft id', outputCol='aircraft_id')
     dateIndexer = StringIndexer(inputCol='date', outputCol='date_id')
     assembler = VectorAssembler(inputCols=['aircraft_id', 'date_id', 'avg_sensor', 'flighthours', 
@@ -85,15 +87,16 @@ def format_record(record):
     
     return record.select('features')
 
-def classifier_pipe(day, aircraft):
+
+def classifier_pipe(day: str, aircraft: str, model_name: str, model_path: str = 'CodeSkeleton/'):
+    """
+    ...
+    """    
 
     record = extract_record(day, aircraft)
     formatted_record = format_record(record)
 
-    model_name = 'DecisionTreeClassifier'
-    model_path = f'CodeSkeleton/{model_name}'
-    loaded_model = mlflow.spark.load_model(model_path)
+    model = mlflow.spark.load_model(model_path + model_name)
+    prediction = model.transform(formatted_record)
 
-    prediction = loaded_model.transform(formatted_record)
-    print(Fore.GREEN + f'Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}')
-    return
+    print(f'Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}')
