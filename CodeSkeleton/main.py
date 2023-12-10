@@ -85,18 +85,18 @@ if __name__== '__main__':
     
     matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
     
-    print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
+    # print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
-    model, _ = analysis_pipe(matrix)
+    # model, _ = analysis_pipe(matrix)
     
-    print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
+    # print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
 
-    day = input('Enter a day (YYYY-MM-DD): ')
-    aircraft = input('Enter an aircraft (XX-XXX): ')
+    # day = input('Enter a day (YYYY-MM-DD): ')
+    # aircraft = input('Enter an aircraft (XX-XXX): ')
 
-    while day != 'exit' and aircraft != 'exit':
-        classifier_pipe(day, aircraft, model.__class__.__name__)
-        day = input('Enter a day (YYYY-MM-DD): ')
-        aircraft = input('Enter an aircraft (XX-XXX): ')
+    # while day != 'exit' and aircraft != 'exit':
+    #     classifier_pipe(day, aircraft, model.__class__.__name__)
+    #     day = input('Enter a day (YYYY-MM-DD): ')
+    #     aircraft = input('Enter an aircraft (XX-XXX): ')
 
-    print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    # print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)

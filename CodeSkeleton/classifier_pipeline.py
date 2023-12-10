@@ -57,6 +57,7 @@ def extract_record(day, aircraft):
     record : pandas.DataFrame
         Record for the given day and aircraft.
     """
+
     record = []
 
     return record
@@ -89,7 +90,7 @@ def format_record(record):
     return record.select('features')
 
 
-def classifier_pipe(day: str, aircraft: str, model_name: str, model_path: str = 'CodeSkeleton/'):
+def classifier_pipe(day: str, aircraft: str, model_name: str, model_path: str = './'):
     """
     ...
     """

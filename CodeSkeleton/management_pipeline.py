@@ -88,22 +88,22 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     matrix = matrix.fillna(0, subset=['label'])
 
-    # matrix = matrix.toPandas()
-    # labels = labels.toPandas()
+    matrix = matrix.toPandas()
+    labels = labels.toPandas()
 
-    # matrix['date'] = pd.to_datetime(matrix['date'])
-    # labels['starttime'] = pd.to_datetime(labels['starttime'])
+    matrix['date'] = pd.to_datetime(matrix['date'])
+    labels['starttime'] = pd.to_datetime(labels['starttime'])
 
-    # for i, row in matrix.iterrows():
-    #     if row['label'] == None:
-    #         seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
+    for i, row in matrix.iterrows():
+        if row['label'] == None:
+            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
 
-    #         if seven_day_label.empty:
-    #             matrix.at[i, 'label'] = 0
-    #         else:
-    #             matrix.at[i, 'label'] = 1
+            if seven_day_label.empty:
+                matrix.at[i, 'label'] = 0
+            else:
+                matrix.at[i, 'label'] = 1
 
-    # matrix = spark.createDataFrame(data=matrix, verifySchema=True)
+    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
     return format_columns(matrix)
 
@@ -129,14 +129,9 @@ def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
                            table="oldinstance.operationinterruption",
                            properties=damos_properties)
 
-    # que es mejor, hacer el select aqui o dejar que lo haga el group by?
-    # labels = labels.select('aircraftregistration', 'starttime').distinct()
-
-    labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
-
     labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
+    labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
     
-    # return labels.orderBy('aircraftregistration', 'date')
     return labels
 
 
@@ -165,7 +160,7 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
         sum('flighthours').alias('flighthours'),
         sum('flightcycles').alias('flightcycles'),
         sum('delayedminutes').alias('delayedminutes'),
-    )#.orderBy('aircraftid', 'timeid')
+    )
 
     return df
 
