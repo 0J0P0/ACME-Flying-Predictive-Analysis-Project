@@ -186,15 +186,9 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
         flightid = file_name.split('-')
         return flightid[4] + '-' + flightid[5].split('.')[0]
 
-    df_list = []
+    df_set = dict()
     all_files = os.listdir(filepath)
 
-    # empty_schema = StructType([
-    #     StructField('aircraft id', StringType(), True),
-    #     StructField('date', StringType(), True),
-    #     StructField('value', DoubleType(), True)
-    # ])
-    # sensors = spark.createDataFrame(data=[], schema=empty_schema)
     for file in all_files:
         if file.endswith('.csv'):
             aircraft_id = extract_aircraft_id(file)
@@ -204,13 +198,15 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
             df = df.withColumn('aircraft id', lit(aircraft_id))
             df = df.select('aircraft id', 'date', 'value')
             
-            df_list.append(df)
+            if aircraft_id in df_set:
+                df_set[aircraft_id] = df_set[aircraft_id].union(df)
+            else:
+                df_set[aircraft_id] = df
 
-            # sensors = sensors.union(df)
+    sensors = df_set[list(df_set.keys())[0]]
+    for i in range(1, len(df_set)):
+        sensors = sensors.union(df_set[list(df_set.keys())[i]])
 
-    sensors = df_list[0]
-    for i in range(1, len(df_list)):
-        sensors = sensors.union(df_list[i])
 
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
