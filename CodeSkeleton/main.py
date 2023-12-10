@@ -74,7 +74,7 @@ if __name__== '__main__':
     os.environ['PYSPARK_DRIVER_PYTHON'] = PYSPARK_DRIVER_PYTHON
 
     conf = SparkConf()
-    conf.set('spark.master', 'local')
+    conf.set('spark.master', 'local[*]')
     conf.set('spark.app.name','DBALab')
     conf.set('spark.jars', JDBC_JAR)
 
@@ -98,7 +98,5 @@ if __name__== '__main__':
         classifier_pipe(day, aircraft, model.__class__.__name__)
         day = input('Enter a day (YYYY-MM-DD): ')
         aircraft = input('Enter an aircraft (XX-XXX): ')
-
-    classifier_pipe('2019-01-01', 'A6-EUZ', model.__class__.__name__)
 
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)

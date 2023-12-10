@@ -177,7 +177,10 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
 
     Returns
     -------
-    None
+    best_classifier : pyspark.ml.PipelineModel
+        Best classifier.
+    classifiers : list
+        List of trained classifiers.
     """
   
     matrix, num_features = format_matrix(matrix)
@@ -191,7 +194,7 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
                   RandomForestClassifier(labelCol='label', featuresCol='features')]
 
-        classifiers = train_model(train, models, 3)
+        classifiers = train_model(train, models)
 
         for c in classifiers:
             # model_name = c.stages[0].__class__.__name__
