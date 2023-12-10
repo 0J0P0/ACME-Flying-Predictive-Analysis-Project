@@ -134,7 +134,7 @@ def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
     return classifiers
 
 
-def format_data(matrix: DataFrame) -> DataFrame:
+def format_matrix(matrix: DataFrame) -> DataFrame:
     """ 
     Formats the matrix for training. Converts the categorical variables to numerical ones and creates a vector with the features.
 
@@ -180,7 +180,7 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
     None
     """
   
-    matrix, num_features = format_data(matrix)
+    matrix, num_features = format_matrix(matrix)
     
     mlflow.set_experiment(experiment_name)
 

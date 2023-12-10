@@ -91,7 +91,7 @@ def format_record(record):
 def classifier_pipe(day: str, aircraft: str, model_name: str, model_path: str = 'CodeSkeleton/'):
     """
     ...
-    """    
+    """
 
     record = extract_record(day, aircraft)
     formatted_record = format_record(record)

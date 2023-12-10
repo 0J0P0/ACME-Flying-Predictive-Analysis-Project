@@ -35,7 +35,7 @@ from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
 #                                                                                                            #
 ##############################################################################################################
 
-def format_matrix(matrix: DataFrame) -> DataFrame:
+def format_columns(matrix: DataFrame) -> DataFrame:
     """
     Formats the matrix so that the columns are the FH, FC and DM KPIs, and the average measurement of the 3453 sensor, and the label.
 
@@ -105,7 +105,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
 
     # matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
-    return format_matrix(matrix)
+    return format_columns(matrix)
 
 
 def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
@@ -236,7 +236,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
     
     if os.path.exists('./resources/matrix'):
         matrix = spark.read.csv('./resources/matrix', header=True)
-        matrix = format_matrix(matrix)
+        matrix = format_columns(matrix)
     else:
         print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
         sensor_data = extract_sensor_data(filepath, spark)
@@ -257,6 +257,6 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         # print(2)
 
         matrix = spark.read.csv('./resources/matrix', header=True)
-        matrix = format_matrix(matrix)
+        matrix = format_columns(matrix)
 
     return matrix
