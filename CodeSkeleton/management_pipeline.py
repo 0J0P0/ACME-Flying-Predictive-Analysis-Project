@@ -84,26 +84,26 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
-    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')
+    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')#.cache()
 
-    # matrix = matrix.fillna(0, subset=['label'])
+    matrix = matrix.fillna(0, subset=['label'])
 
-    matrix = matrix.toPandas()
-    labels = labels.toPandas()
+    # matrix = matrix.toPandas()
+    # labels = labels.toPandas()
 
-    matrix['date'] = pd.to_datetime(matrix['date'])
-    labels['starttime'] = pd.to_datetime(labels['starttime'])
+    # matrix['date'] = pd.to_datetime(matrix['date'])
+    # labels['starttime'] = pd.to_datetime(labels['starttime'])
 
-    for i, row in matrix.iterrows():
-        if row['label'] == None:
-            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
+    # for i, row in matrix.iterrows():
+    #     if row['label'] == None:
+    #         seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
 
-            if seven_day_label.empty:
-                matrix.at[i, 'label'] = 0
-            else:
-                matrix.at[i, 'label'] = 1
+    #         if seven_day_label.empty:
+    #             matrix.at[i, 'label'] = 0
+    #         else:
+    #             matrix.at[i, 'label'] = 1
 
-    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
+    # matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
     return format_columns(matrix)
 
@@ -125,11 +125,11 @@ def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
         DataFrame with the aircraft registration, the date and the label.
     """
 
-    labels = spark.read.jdbc(url=damos_properties["url"],
-                           table="oldinstance.operationinterruption",
+    labels = spark.read.jdbc(url=damos_properties['url'],
+                           table='oldinstance.operationinterruption',
                            properties=damos_properties)
 
-    labels = labels.withColumn("starttime", to_date(col("starttime"), 'yyyy-MM-dd'))
+    labels = labels.withColumn('starttime', to_date(col('starttime'), 'yyyy-MM-dd'))
     labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
     
     return labels
