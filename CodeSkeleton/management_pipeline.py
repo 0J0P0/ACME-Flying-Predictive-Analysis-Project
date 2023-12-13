@@ -25,9 +25,10 @@ This pipeline generates a matrix where the rows denote the information of an air
 import os
 import pandas as pd
 from colorama import Fore
+from datetime import timedelta
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StringType, DoubleType, IntegerType, StructType, StructField
-from pyspark.sql.functions import avg, sum, lit, to_date, col, substring
+from pyspark.sql.types import StringType, DoubleType, IntegerType
+from pyspark.sql.functions import avg, sum, lit, to_date, col, substring, expr, date_add
 
 ##############################################################################################################
 #                                                                                                            #
@@ -82,34 +83,62 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
     """
     
-    # matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
+    matrix = sensor_data.join(
+        kpis,
+        (
+            (sensor_data['aircraft id'] == kpis['aircraftid']) &
+            (sensor_data['date'] == kpis['timeid'])
+        ),
+        'inner').drop('aircraftid', 'timeid').cache()
+    
+    print(matrix.count())
+    
+    matrix = matrix.withColumn('date', col('date').cast('date'))
+    labels = labels.withColumn('starttime', col('starttime').cast('date'))
 
-    # matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')#.cache()
+    matrix = matrix.join(
+        labels,
+        (
+            (col('aircraft id') == col('aircraftregistration')) &
+            (col('starttime').between(col('date'), date_add(col('date'), 7)))
+        ),
+        'left').cache()
+    
+    print(matrix.count())
 
-    matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
+    matrix = matrix.withColumn('label', expr('CASE WHEN aircraftregistration IS NOT NULL THEN 1 ELSE 0 END'))
 
-    matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')#.cache()
+    matrix = matrix.drop('aircraftregistration', 'starttime')
 
-    matrix = matrix.fillna(0, subset=['label'])
+    # ...
+    matrix = matrix.dropDuplicates(['aircraft id', 'date'])
 
-    matrix = matrix.toPandas()
-    labels = labels.toPandas()
+    print(matrix.count())
+    
+    # matrix.createOrReplaceTempView("matrix")
+    # labels.createOrReplaceTempView("labels")
 
-    matrix['date'] = pd.to_datetime(matrix['date'])
-    labels['starttime'] = pd.to_datetime(labels['starttime'])
-
-    for i, row in matrix.iterrows():
-        if row['label'] == None:
-            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
-
-            if seven_day_label.empty:
-                matrix.at[i, 'label'] = 0
-            else:
-                matrix.at[i, 'label'] = 1
-
-    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
+    # matrix = spark.sql("""
+    #     SELECT
+    #         matrix.*,
+    #                    CASE WHEN EXISTS (
+    #                         SELECT
+    #                             COUNT(*)
+    #                         FROM 
+    #                             labels l2, matrix m2
+    #                         WHERE l2.starttime BETWEEN m2.date AND DATE_ADD(m2.date, 7) AND l2.aircraftregistration = m2.`aircraft id`
+    #                     ) THEN 1 ELSE 0 END AS label
+    #     FROM
+    #         matrix
+    #     LEFT JOIN
+    #         labels
+    #     ON
+    #         matrix.`aircraft id` = labels.aircraftregistration AND matrix.date = labels.starttime
+    #     """)
 
     return format_columns(matrix)
+
+
 
 
 def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
@@ -136,9 +165,10 @@ def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
     # print(labels.count())
     labels = labels.where(col('subsystem') == '3453')
     # print(labels.count())
-    labels = labels.withColumn('label', lit(1))
+    # labels = labels.withColumn('label', lit(1))
     labels = labels.withColumn('starttime', to_date(col('starttime'), 'yyyy-MM-dd'))
-    labels = labels.select('aircraftregistration', 'starttime', 'label')
+    # labels = labels.select('aircraftregistration', 'starttime', 'label')
+    labels = labels.select('aircraftregistration', 'starttime')
     # labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
     # print(labels.count())
     
@@ -162,18 +192,20 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
         DataFrame with the FH, FC and DM KPIs.
     """
 
-    data = spark.read.jdbc(url=dbw_properties["url"],
+    kpis = spark.read.jdbc(url=dbw_properties["url"],
                            table="public.aircraftutilization",
                            properties=dbw_properties)
-    # print(data.count())
-    # data = data.groupBy('aircraftid', 'timeid').agg(
+    # print(kpis.count())
+    # kpis = kpis.groupBy('aircraftid', 'timeid').agg(
     #     sum('flighthours').alias('flighthours'),
     #     sum('flightcycles').alias('flightcycles'),
     #     sum('delayedminutes').alias('delayedminutes'),
     # )
-    # print(data.count()) 
+    # print(kpis.count()) 
 
-    return data
+    kpis = kpis.select('aircraftid', 'timeid', 'flighthours', 'flightcycles', 'delayedminutes')
+
+    return kpis
 
 
 def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
@@ -214,10 +246,10 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
             else:
                 df_set[aircraft_id] = df
 
-    sensors = df_set[list(df_set.keys())[0]]
+    ####################################################
+    sensors = df_set[list(df_set.keys())[0]].cache()
     for i in range(1, len(df_set)):
         sensors = sensors.union(df_set[list(df_set.keys())[i]])
-
 
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
