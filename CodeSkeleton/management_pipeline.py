@@ -82,33 +82,37 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
     """
     
+    # matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
+
+    # matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')#.cache()
+
     matrix = sensor_data.join(kpis, (sensor_data['aircraft id'] == kpis['aircraftid']) & (sensor_data['date'] == kpis['timeid']), 'inner').drop('aircraftid', 'timeid')
 
     matrix = matrix.join(labels, (matrix['aircraft id'] == labels['aircraftregistration']) & (matrix['date'] == labels['starttime']), 'left').drop('aircraftregistration', 'starttime')#.cache()
 
     matrix = matrix.fillna(0, subset=['label'])
 
-    # matrix = matrix.toPandas()
-    # labels = labels.toPandas()
+    matrix = matrix.toPandas()
+    labels = labels.toPandas()
 
-    # matrix['date'] = pd.to_datetime(matrix['date'])
-    # labels['starttime'] = pd.to_datetime(labels['starttime'])
+    matrix['date'] = pd.to_datetime(matrix['date'])
+    labels['starttime'] = pd.to_datetime(labels['starttime'])
 
-    # for i, row in matrix.iterrows():
-    #     if row['label'] == None:
-    #         seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
+    for i, row in matrix.iterrows():
+        if row['label'] == None:
+            seven_day_label = labels[(labels['aircraftregistration'] == row['aircraft id']) & (labels['starttime'] > row['date']) & (labels['starttime'] <= row['date'] + pd.DateOffset(days=7))]
 
-    #         if seven_day_label.empty:
-    #             matrix.at[i, 'label'] = 0
-    #         else:
-    #             matrix.at[i, 'label'] = 1
+            if seven_day_label.empty:
+                matrix.at[i, 'label'] = 0
+            else:
+                matrix.at[i, 'label'] = 1
 
-    # matrix = spark.createDataFrame(data=matrix, verifySchema=True)
+    matrix = spark.createDataFrame(data=matrix, verifySchema=True)
 
     return format_columns(matrix)
 
 
-def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
+def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
     """
     Extracts the maintenance labels from the AMOS database and returns a DataFrame with the aircraft registration, the date and the label.
 
@@ -116,7 +120,7 @@ def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
     ----------
     spark : SparkSession
         SparkSession object.
-    damos_properties : dict
+    amos_properties : dict
         Dictionary with the properties to connect to the AMOS database.
 
     Returns
@@ -125,12 +129,18 @@ def extract_labels(spark: SparkSession, damos_properties: dict) -> DataFrame:
         DataFrame with the aircraft registration, the date and the label.
     """
 
-    labels = spark.read.jdbc(url=damos_properties['url'],
+    labels = spark.read.jdbc(url=amos_properties['url'],
                            table='oldinstance.operationinterruption',
-                           properties=damos_properties)
+                           properties=amos_properties)
 
+    # print(labels.count())
+    labels = labels.where(col('subsystem') == '3453')
+    # print(labels.count())
+    labels = labels.withColumn('label', lit(1))
     labels = labels.withColumn('starttime', to_date(col('starttime'), 'yyyy-MM-dd'))
-    labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
+    labels = labels.select('aircraftregistration', 'starttime', 'label')
+    # labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
+    # print(labels.count())
     
     return labels
 
@@ -155,14 +165,15 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
     data = spark.read.jdbc(url=dbw_properties["url"],
                            table="public.aircraftutilization",
                            properties=dbw_properties)
+    # print(data.count())
+    # data = data.groupBy('aircraftid', 'timeid').agg(
+    #     sum('flighthours').alias('flighthours'),
+    #     sum('flightcycles').alias('flightcycles'),
+    #     sum('delayedminutes').alias('delayedminutes'),
+    # )
+    # print(data.count()) 
 
-    df = data.groupBy('aircraftid', 'timeid').agg(
-        sum('flighthours').alias('flighthours'),
-        sum('flightcycles').alias('flightcycles'),
-        sum('delayedminutes').alias('delayedminutes'),
-    )
-
-    return df
+    return data
 
 
 def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
