@@ -91,7 +91,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         ),
         'inner').drop('aircraftid', 'timeid').cache()
     
-    print(matrix.count())
+    # print(matrix.count())
     
     matrix = matrix.withColumn('date', col('date').cast('date'))
     labels = labels.withColumn('starttime', col('starttime').cast('date'))
@@ -104,7 +104,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         ),
         'left').cache()
     
-    print(matrix.count())
+    # print(matrix.count())
 
     matrix = matrix.withColumn('label', expr('CASE WHEN aircraftregistration IS NOT NULL THEN 1 ELSE 0 END'))
 
@@ -113,7 +113,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     # ...
     matrix = matrix.dropDuplicates(['aircraft id', 'date'])
 
-    print(matrix.count())
+    # print(matrix.count())
     
     # matrix.createOrReplaceTempView("matrix")
     # labels.createOrReplaceTempView("labels")
@@ -137,8 +137,6 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     #     """)
 
     return format_columns(matrix)
-
-
 
 
 def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
@@ -299,7 +297,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         matrix.write.csv('./resources/matrix', header=True)
         # print(2)
 
-        matrix = spark.read.csv('./resources/matrix', header=True)
-        matrix = format_columns(matrix)
+        # matrix = spark.read.csv('./resources/matrix', header=True)
+        # matrix = format_columns(matrix)
 
     return matrix
