@@ -26,14 +26,10 @@ The steps are the following:
 ##############################################################################################################
 
 import mlflow
-import pandas as pd
 from colorama import Fore
 from pyspark.sql import DataFrame
-from pyspark.ml import Pipeline, PipelineModel
+from pyspark.ml import Pipeline 
 from pyspark.ml.feature import StringIndexer, VectorAssembler
-from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
 
 ##############################################################################################################
 #                                                                                                            #
@@ -139,7 +135,7 @@ def classifier_pipe(model_name: str, matrix: DataFrame, model_path: str = './mod
         model = mlflow.spark.load_model(model_path + model_name)
         prediction = model.transform(formatted_record)
 
-        print(f'Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}')
+        print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}{Fore.RESET}')
 
         day = input('Enter a day (YYYY-MM-DD): ')
         aircraft = input('Enter an aircraft (XX-XXX): ')

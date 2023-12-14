@@ -23,12 +23,10 @@ This pipeline generates a matrix where the rows denote the information of an air
 ##############################################################################################################
 
 import os
-import pandas as pd
 from colorama import Fore
-from datetime import timedelta
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StringType, DoubleType, IntegerType
-from pyspark.sql.functions import avg, sum, lit, to_date, col, substring, expr, date_add
+from pyspark.sql.functions import avg, lit, to_date, col, substring, expr, date_add
 
 ##############################################################################################################
 #                                                                                                            #

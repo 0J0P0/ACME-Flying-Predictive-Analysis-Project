@@ -37,51 +37,51 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 #                                                                                                            #
 ##############################################################################################################
 
-def evaluate_classifiers(classifiers: list, test: DataFrame):
-    """
-    Evaluates the classifiers.
+# def evaluate_classifiers(classifiers: list, test: DataFrame):
+#     """
+#     Evaluates the classifiers.
 
-    Parameters
-    ----------
-    classifiers : list
-        List of trained classifiers.
-    test : pyspark.sql.DataFrame
-        DataFrame with the test data.
+#     Parameters
+#     ----------
+#     classifiers : list
+#         List of trained classifiers.
+#     test : pyspark.sql.DataFrame
+#         DataFrame with the test data.
 
-    Returns
-    -------
-    best_classifier : pyspark.ml.PipelineModel
-        Best classifier.
-    """
+#     Returns
+#     -------
+#     best_classifier : pyspark.ml.PipelineModel
+#         Best classifier.
+#     """
     
-    best_accuracy = 0
+#     best_accuracy = 0
 
-    # Evaluate classifiers
-    for classifier in classifiers:
-        predictions = classifier.transform(test)
-        evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
-                                                      predictionCol="prediction",
-                                                      metricName="accuracy")
-        accuracy = evaluator_acc.evaluate(predictions)
+#     # Evaluate classifiers
+#     for classifier in classifiers:
+#         predictions = classifier.transform(test)
+#         evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
+#                                                       predictionCol="prediction",
+#                                                       metricName="accuracy")
+#         accuracy = evaluator_acc.evaluate(predictions)
         
-        print("Accuracy for classifier: ", accuracy)
+#         print("Accuracy for classifier: ", accuracy)
 
-        #weighted to take into account the imbalance of classes
-        evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
-                                                      predictionCol="prediction",
-                                                      metricName="weightedRecall")
-        recall = evaluator_rec.evaluate(predictions)
+#         #weighted to take into account the imbalance of classes
+#         evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
+#                                                       predictionCol="prediction",
+#                                                       metricName="weightedRecall")
+#         recall = evaluator_rec.evaluate(predictions)
         
-        print("Recall for classifier: ", recall)
+#         print("Recall for classifier: ", recall)
 
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_classifier = classifier
+#         if accuracy > best_accuracy:
+#             best_accuracy = accuracy
+#             best_classifier = classifier
 
-    # Get the best classifier
-    print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
+#     # Get the best classifier
+#     print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
 
-    return best_classifier
+#     return best_classifier
 
 
 def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
@@ -102,6 +102,8 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     
     recall = evaluator2.evaluate(classifier.transform(test))
     mlflow.log_metrics({'recall': recall})
+
+    return acc, recall
 
 
 def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
@@ -192,20 +194,22 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
                   RandomForestClassifier(labelCol='label', featuresCol='features')]
 
         classifiers = train_model(train, models)
-
+        sorted_classifiers = []
+        
         for c in classifiers:
             # model_name = c.stages[0].__class__.__name__
             model_name = c.__class__.__name__
             
             mlflow.spark.log_model(c, model_name)
             mlflow.log_params({'num_features': num_features})
-            
-            evaluate_and_log_metrics(c, test)
+
+            acc, rec = evaluate_and_log_metrics(c, test)
+            sorted_classifiers.append((model_name, acc, rec))
+
             mlflow.spark.save_model(c, 'models/' + model_name)
 
     mlflow.end_run()
 
-    # best_classifier = evaluate_classifiers(classifiers, test)
-    # return best_classifier, classifiers
+    sorted_classifiers.sort(key=lambda x: x[1], reverse=True)
 
-    return classifiers[0], classifiers
+    return sorted_classifiers[0][0], classifiers

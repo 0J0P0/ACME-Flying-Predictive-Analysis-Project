@@ -83,7 +83,7 @@ if __name__== '__main__':
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
     
-    matrix = managment_pipe(spark, dbw_properties, amos_properties)
+    matrix = managment_pipe(spark, dbw_properties, amos_properties, save=True)
     
     print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
@@ -91,6 +91,6 @@ if __name__== '__main__':
     
     print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
 
-    classifier_pipe(model, matrix)
+    classifier_pipe(model.__class__.__name__, matrix)
 
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
