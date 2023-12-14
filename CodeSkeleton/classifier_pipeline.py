@@ -90,15 +90,51 @@ def format_record(record):
     return record.select('features')
 
 
-def classifier_pipe(day: str, aircraft: str, model_name: str, model_path: str = './'):
+def valid_input(day: str, aircraft: str):
+    """
+    Checks if the input is valid. The input is valid if it has the following format:
+    - day: YYYY-MM-DD
+    - aircraft: XX-XXX
+
+    Parameters
+    ----------
+    day : str
+        Day to check.
+    aircraft : str
+        Aircraft to check.
+
+    Returns
+    -------
+    valid : bool
+        True if the input is valid, False otherwise.
+    """
+
+    aux = day.split('-')
+    valid = len(aux) == 3 and len(aux[0]) == 4 and len(aux[1]) == 2 and len(aux[2]) == 2
+    
+    aux = aircraft.split('-')
+    valid = valid and len(aux) == 2 and len(aux[0]) == 2 and len(aux[1]) == 3
+
+    return valid
+
+
+def classifier_pipe(model_name: str, model_path: str = './'):
     """
     ...
     """
 
-    record = extract_record(day, aircraft)
-    formatted_record = format_record(record)
+    day = input('Enter a day (YYYY-MM-DD): ')
+    aircraft = input('Enter an aircraft (XX-XXX): ')
 
-    model = mlflow.spark.load_model(model_path + model_name)
-    prediction = model.transform(formatted_record)
+    while valid_input(day, aircraft):
 
-    print(f'Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}')
+        record = extract_record(day, aircraft)
+        formatted_record = format_record(record)
+
+        model = mlflow.spark.load_model(model_path + model_name)
+        prediction = model.transform(formatted_record)
+
+        print(f'Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}')
+
+        day = input('Enter a day (YYYY-MM-DD): ')
+        aircraft = input('Enter an aircraft (XX-XXX): ')
