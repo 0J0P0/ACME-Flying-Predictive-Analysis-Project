@@ -41,27 +41,6 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 #                                                                                                            #
 ##############################################################################################################
 
-def extract_record(day, aircraft):
-    """
-    Extracts the record for the given day and aircraft.
-
-    Parameters
-    ----------
-    day : str
-        Day to extract the record.
-    aircraft : str
-        Aircraft to extract the record.
-
-    Returns
-    -------
-    record : pandas.DataFrame
-        Record for the given day and aircraft.
-    """
-
-    record = []
-
-    return record
-
 
 def format_record(record):
     """
@@ -90,6 +69,29 @@ def format_record(record):
     return record.select('features')
 
 
+def extract_record(day: str, aircraft: str, matrix: DataFrame):
+    """
+    Extracts the record for the given day and aircraft.
+
+    Parameters
+    ----------
+    day : str
+        Day to extract the record.
+    aircraft : str
+        Aircraft to extract the record.
+
+    Returns
+    -------
+    record : pandas.DataFrame
+        Record for the given day and aircraft.
+    """
+
+    record = matrix.filter(matrix['date'] == day).filter(matrix['aircraft id'] == aircraft)
+    record = record.select('aircraft id', 'date', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes')
+
+    return record
+
+
 def valid_input(day: str, aircraft: str):
     """
     Checks if the input is valid. The input is valid if it has the following format:
@@ -115,10 +117,13 @@ def valid_input(day: str, aircraft: str):
     aux = aircraft.split('-')
     valid = valid and len(aux) == 2 and len(aux[0]) == 2 and len(aux[1]) == 3
 
+    if not valid:
+        print(f'{Fore.RED}Invalid input.{Fore.RESET}')
+
     return valid
 
 
-def classifier_pipe(model_name: str, model_path: str = './'):
+def classifier_pipe(model_name: str, matrix: DataFrame, model_path: str = './models/'):
     """
     ...
     """
@@ -128,7 +133,7 @@ def classifier_pipe(model_name: str, model_path: str = './'):
 
     while valid_input(day, aircraft):
 
-        record = extract_record(day, aircraft)
+        record = extract_record(day, aircraft, matrix)
         formatted_record = format_record(record)
 
         model = mlflow.spark.load_model(model_path + model_name)

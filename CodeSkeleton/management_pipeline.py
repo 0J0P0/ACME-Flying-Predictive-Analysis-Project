@@ -139,7 +139,7 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
     return format_columns(matrix)
 
 
-def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
+def extract_labels(spark: SparkSession, amos_properties: dict, record: tuple = None) -> DataFrame:
     """
     Extracts the maintenance labels from the AMOS database and returns a DataFrame with the aircraft registration, the date and the label.
 
@@ -173,7 +173,7 @@ def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
     return labels
 
 
-def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
+def extract_dw_data(spark: SparkSession, dbw_properties: dict, record: tuple = None) -> DataFrame:
     """
     Extracts the KPIs related to an aircraft from the Data Warehouse and returns a DataFrame with the FH, FC and DM KPIs.
 
@@ -206,7 +206,7 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict) -> DataFrame:
     return kpis
 
 
-def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
+def extract_sensor_data(spark: SparkSession, filepath: str, record: tuple = None) -> DataFrame:
     """
     Extracts the sensor measurements from the CSV files and returns a DataFrame with the average measurement per flight per day.
 
@@ -245,7 +245,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
                 df_set[aircraft_id] = df
 
     ####################################################
-    sensors = df_set[list(df_set.keys())[0]].cache()
+    sensors = df_set[list(df_set.keys())[0]]
     for i in range(1, len(df_set)):
         sensors = sensors.union(df_set[list(df_set.keys())[i]])
 
@@ -254,7 +254,7 @@ def extract_sensor_data(filepath: str, spark: SparkSession) -> DataFrame:
     return sensors
 
 
-def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, damos_properties: dict) -> DataFrame:
+def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, filepath: str = './resources/trainingData/', save: bool = False, record: tuple = None) -> DataFrame:
     """
     Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
 
@@ -266,7 +266,7 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         SparkSession object.
     dbw_properties : dict
         Dictionary with the properties to connect to the Data Warehouse.
-    damos_properties : dict
+    amos_properties : dict
         Dictionary with the properties to connect to the AMOS database.
 
     Returns
@@ -275,26 +275,29 @@ def managment_pipe(filepath: str, spark: SparkSession, dbw_properties: dict, dam
         Matrix with the gathered data.
     """
     
-    if os.path.exists('./resources/matrix'):
+    if os.path.exists('./resources/matrix') and record is None:
         matrix = spark.read.csv('./resources/matrix', header=True)
         matrix = format_columns(matrix)
     else:
         print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
-        sensor_data = extract_sensor_data(filepath, spark)
+        sensor_data = extract_sensor_data(spark, filepath, record).cache()
         # print(sensor_data.count())
         
         print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
-        kpis = extract_dw_data(spark, dbw_properties)
+        kpis = extract_dw_data(spark, dbw_properties, record).cache()
         # print(kpis.count())
 
         print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
-        labels = extract_labels(spark, damos_properties)
+        labels = extract_labels(spark, amos_properties, record).cache()
         # print(labels.count())
 
+        print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
         matrix = join_dataframes(spark, sensor_data, kpis, labels)
 
         # print(1)
-        matrix.write.csv('./resources/matrix', header=True)
+        if save:
+            print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
+            matrix.write.csv('./resources/matrix', header=True)
         # print(2)
 
         # matrix = spark.read.csv('./resources/matrix', header=True)

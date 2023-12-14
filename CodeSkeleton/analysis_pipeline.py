@@ -201,7 +201,7 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
             mlflow.log_params({'num_features': num_features})
             
             evaluate_and_log_metrics(c, test)
-            mlflow.spark.save_model(c, model_name)
+            mlflow.spark.save_model(c, 'models/' + model_name)
 
     mlflow.end_run()
 

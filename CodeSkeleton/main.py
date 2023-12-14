@@ -46,7 +46,7 @@ dbw_properties = {'driver': 'org.postgresql.Driver',
                  'user': 'juan.pablo.zaldivar',
                  'password': 'DB021202'}
 
-damos_properties = {'driver': 'org.postgresql.Driver',
+amos_properties = {'driver': 'org.postgresql.Driver',
                 'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
                 'user': 'juan.pablo.zaldivar',
                 'password': 'DB021202'}
@@ -56,7 +56,7 @@ damos_properties = {'driver': 'org.postgresql.Driver',
 #              'user': 'enric.millan.iglesias',
 #              'password': 'DB220303'}
 
-# damos_properties = {'driver': 'org.postgresql.Driver',
+# amos_properties = {'driver': 'org.postgresql.Driver',
 #              'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
 #              'user': 'enric.millan.iglesias',
 #              'password': 'DB220303'}
@@ -83,7 +83,7 @@ if __name__== '__main__':
 
     print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
     
-    matrix = managment_pipe('./resources/trainingData/', spark, dbw_properties, damos_properties)
+    matrix = managment_pipe(spark, dbw_properties, amos_properties)
     
     print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
     
@@ -91,6 +91,6 @@ if __name__== '__main__':
     
     print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50 + '\n' + f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
 
+    classifier_pipe(model, matrix)
 
-
-    # print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
