@@ -212,4 +212,8 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
 
     sorted_classifiers.sort(key=lambda x: x[1], reverse=True)
 
-    return sorted_classifiers[0][0], classifiers
+    with open('models/classifiers.txt', 'w') as f:
+        for c in sorted_classifiers:
+            f.write(f'{c[0]}: {c[1]} {c[2]}\n')
+
+    return sorted_classifiers[0][0], sorted_classifiers

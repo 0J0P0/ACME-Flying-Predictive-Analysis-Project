@@ -27,8 +27,8 @@ The steps are the following:
 
 import mlflow
 from colorama import Fore
-from pyspark.sql import DataFrame
 from pyspark.ml import Pipeline 
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 
 ##############################################################################################################
@@ -36,6 +36,22 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 # Functions                                                                                                  #
 #                                                                                                            #
 ##############################################################################################################
+
+
+def read_saved_model(model_path: str = './models/'):
+    """
+    .
+    """
+
+    # read best model from classifiers.txt
+    with open(model_path + 'classifiers.txt', 'r') as f:
+        # read first line
+        line = f.readline()
+        # select the line until :
+        model_name = line.split(':')[0].strip()
+        print(model_name)
+
+    return mlflow.spark.load_model(model_path + model_name)
 
 
 def format_record(record):
@@ -128,14 +144,16 @@ def classifier_pipe(model_name: str, matrix: DataFrame, model_path: str = './mod
     aircraft = input('Enter an aircraft (XX-XXX): ')
 
     while valid_input(day, aircraft):
+        try:
+            record = extract_record(day, aircraft, matrix)
+            formatted_record = format_record(record)
 
-        record = extract_record(day, aircraft, matrix)
-        formatted_record = format_record(record)
+            model = read_saved_model(model_name, model_path)
+            prediction = model.transform(formatted_record)
 
-        model = mlflow.spark.load_model(model_path + model_name)
-        prediction = model.transform(formatted_record)
-
-        print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}{Fore.RESET}')
+            print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}{Fore.RESET}')
+        except:
+            print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}.{Fore.RESET}')
 
         day = input('Enter a day (YYYY-MM-DD): ')
         aircraft = input('Enter an aircraft (XX-XXX): ')

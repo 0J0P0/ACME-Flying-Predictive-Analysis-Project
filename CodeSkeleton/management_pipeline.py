@@ -252,7 +252,16 @@ def extract_sensor_data(spark: SparkSession, filepath: str, record: tuple = None
     return sensors
 
 
-def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, filepath: str = './resources/trainingData/', save: bool = False, record: tuple = None) -> DataFrame:
+def read_saved_matrix(spark: SparkSession) -> DataFrame:
+    """
+    .
+    """
+
+    matrix = spark.read.csv('./resources/matrix', header=True)
+    return format_columns(matrix)
+
+
+def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, stage: str, filepath: str = './resources/trainingData/', save: bool = True, record: tuple = None) -> DataFrame:
     """
     Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
 
@@ -273,9 +282,8 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         Matrix with the gathered data.
     """
     
-    if os.path.exists('./resources/matrix') and record is None:
-        matrix = spark.read.csv('./resources/matrix', header=True)
-        matrix = format_columns(matrix)
+    if os.path.exists('./resources/matrix') and record is None and stage in ['all', 'management']:
+        matrix = read_saved_matrix(spark)
     else:
         print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
         sensor_data = extract_sensor_data(spark, filepath, record).cache()
