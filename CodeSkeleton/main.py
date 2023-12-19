@@ -62,7 +62,7 @@ amos_properties = {'driver': 'org.postgresql.Driver',
 #              'password': 'DB220303'}
 
 
-def read_saved_pipelines(spark: SparkSession):
+def read_saved_pipelines(spark: SparkSession, model_name: str = None):
     """
     .
     """
@@ -76,10 +76,28 @@ def read_saved_pipelines(spark: SparkSession):
 
     if stage == 'classifier':
         try:
-            return read_saved_matrix(spark), read_saved_model()
+            return read_saved_matrix(spark), read_saved_model(model_name)
         except:
             print(f'{Fore.RED}Error reading the matrix and/or the model from the resources folder. Try executing the management and analysis pipelines first.{Fore.RESET}')
             sys.exit(1)
+
+
+def select_model():
+    """
+    .
+    """
+
+    print(f'{Fore.YELLOW}Select the model from the following list: \n \t - DecisionTree \n \t - RandomForest \n \t - Default (Best accuracy model){Fore.RESET}')
+
+    model_name = input('Model: ')
+
+    if model_name not in ['DecisionTree', 'RandomForest', 'Default']:
+        print(f'{Fore.RED}Invalid model name, try any of the following: DecisionTree, RandomForest{Fore.RESET}')
+        sys.exit(1)
+
+    if model_name == 'Default':
+        model_name = None
+    return model_name
 
 
 def pipeline_stage():
@@ -134,8 +152,8 @@ if __name__== '__main__':
     
     print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
     if stage == 'classifier':
-        # choose model 
-        matrix, model = read_saved_pipelines(spark)
+        model_name = select_model()
+        matrix, model = read_saved_pipelines(spark, model_name)
         # print(matrix)
     classifier_pipe(model, matrix)
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)

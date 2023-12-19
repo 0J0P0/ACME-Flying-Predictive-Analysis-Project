@@ -38,20 +38,29 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 ##############################################################################################################
 
 
-def read_saved_model(model_path: str = './models/'):
+def read_saved_model(model_name: str = None, model_path: str = './models/'):
     """
     .
     """
+    
+    if model_name is None:
+        with open(model_path + 'classifiers.txt', 'r') as f:
+            line = f.readline()
+            model = line.split(':')[0].strip()
+    else:
+        model_name = model_name + 'ClassificationModel'
 
-    # read best model from classifiers.txt
-    with open(model_path + 'classifiers.txt', 'r') as f:
-        # read first line
-        line = f.readline()
-        # select the line until :
-        model_name = line.split(':')[0].strip()
-        # print(model_name)
+        with open(model_path + 'classifiers.txt', 'r') as f:
+            found = False
+            while not found:
+                line = f.readline()
+                model = line.split(':')[0].strip()
 
-    return mlflow.spark.load_model(model_path + model_name)
+                if model == model_name:
+                    found = True
+
+
+    return mlflow.spark.load_model(model_path + model)
 
 
 def format_record(record):
@@ -150,7 +159,12 @@ def classifier_pipe(model, matrix: DataFrame, model_path: str = './models/'):
 
             prediction = model.transform(formatted_record)
 
-            print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}{Fore.RESET}')
+            pred = prediction.select("prediction").first()[0]
+            if pred == 0.0:
+                pred = 'No maintenance'
+            else:
+                pred = 'Maintenance'
+            print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
         except:
             print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}.{Fore.RESET}')
 
