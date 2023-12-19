@@ -134,8 +134,10 @@ if __name__== '__main__':
     
     print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
     if stage == 'classifier':
+        # choose model 
         matrix, model = read_saved_pipelines(spark)
-    classifier_pipe(model.__class__.__name__, matrix)
+        # print(matrix)
+    classifier_pipe(model, matrix)
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
 

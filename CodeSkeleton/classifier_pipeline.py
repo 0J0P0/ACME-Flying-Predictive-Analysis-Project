@@ -49,7 +49,7 @@ def read_saved_model(model_path: str = './models/'):
         line = f.readline()
         # select the line until :
         model_name = line.split(':')[0].strip()
-        print(model_name)
+        # print(model_name)
 
     return mlflow.spark.load_model(model_path + model_name)
 
@@ -135,7 +135,7 @@ def valid_input(day: str, aircraft: str):
     return valid
 
 
-def classifier_pipe(model_name: str, matrix: DataFrame, model_path: str = './models/'):
+def classifier_pipe(model, matrix: DataFrame, model_path: str = './models/'):
     """
     ...
     """
@@ -148,7 +148,6 @@ def classifier_pipe(model_name: str, matrix: DataFrame, model_path: str = './mod
             record = extract_record(day, aircraft, matrix)
             formatted_record = format_record(record)
 
-            model = read_saved_model(model_name, model_path)
             prediction = model.transform(formatted_record)
 
             print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {prediction.select("prediction").first()[0]}{Fore.RESET}')
