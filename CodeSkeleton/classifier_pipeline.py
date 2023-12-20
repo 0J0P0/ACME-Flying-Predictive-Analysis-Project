@@ -59,7 +59,7 @@ def read_saved_model(model_name: str, model_path: str = './models/'):
     return mlflow.spark.load_model(model_path + model)
 
 
-def format_record(record):
+def format_record(record: DataFrame):
     """
     Formats the record so it can be used by the model.
 
