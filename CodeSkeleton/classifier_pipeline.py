@@ -43,7 +43,7 @@ def read_saved_model(model_name: str = None, model_path: str = './models/'):
     .
     """
     
-    if model_name is None:
+    if model_name == 'Default':
         with open(model_path + 'classifiers.txt', 'r') as f:
             line = f.readline()
             model = line.split(':')[0].strip()
@@ -154,6 +154,10 @@ def classifier_pipe(model, matrix: DataFrame, model_path: str = './models/'):
 
     while valid_input(day, aircraft):
         try:
+            # conectar a DW
+            # extraer datos
+
+
             record = extract_record(day, aircraft, matrix)
             formatted_record = format_record(record)
 

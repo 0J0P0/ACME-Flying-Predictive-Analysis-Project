@@ -37,52 +37,6 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 #                                                                                                            #
 ##############################################################################################################
 
-# def evaluate_classifiers(classifiers: list, test: DataFrame):
-#     """
-#     Evaluates the classifiers.
-
-#     Parameters
-#     ----------
-#     classifiers : list
-#         List of trained classifiers.
-#     test : pyspark.sql.DataFrame
-#         DataFrame with the test data.
-
-#     Returns
-#     -------
-#     best_classifier : pyspark.ml.PipelineModel
-#         Best classifier.
-#     """
-    
-#     best_accuracy = 0
-
-#     # Evaluate classifiers
-#     for classifier in classifiers:
-#         predictions = classifier.transform(test)
-#         evaluator_acc = MulticlassClassificationEvaluator(labelCol="label",
-#                                                       predictionCol="prediction",
-#                                                       metricName="accuracy")
-#         accuracy = evaluator_acc.evaluate(predictions)
-        
-#         print("Accuracy for classifier: ", accuracy)
-
-#         #weighted to take into account the imbalance of classes
-#         evaluator_rec = MulticlassClassificationEvaluator(labelCol="label",
-#                                                       predictionCol="prediction",
-#                                                       metricName="weightedRecall")
-#         recall = evaluator_rec.evaluate(predictions)
-        
-#         print("Recall for classifier: ", recall)
-
-#         if accuracy > best_accuracy:
-#             best_accuracy = accuracy
-#             best_classifier = classifier
-
-#     # Get the best classifier
-#     print(Fore.GREEN + "Best classifier: ", best_classifier.stages[0].__class__.__name__, Fore.RESET)
-
-#     return best_classifier
-
 
 def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     """

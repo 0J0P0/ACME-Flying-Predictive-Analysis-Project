@@ -26,6 +26,7 @@ import sys
 from colorama import Fore
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
+from utils import read_arguments
 from analysis_pipeline import analysis_pipe
 from classifier_pipeline import classifier_pipe, read_saved_model
 from management_pipeline import managment_pipe, read_saved_matrix
@@ -35,31 +36,6 @@ from management_pipeline import managment_pipe, read_saved_matrix
 # Variables                                                                                                  #
 #                                                                                                            #
 ##############################################################################################################
-
-HADOOP_HOME = './resources/hadoop_home'
-JDBC_JAR = './resources/postgresql-42.2.8.jar'
-PYSPARK_PYTHON = 'python3.11'
-PYSPARK_DRIVER_PYTHON = 'python3.11'
-
-dbw_properties = {'driver': 'org.postgresql.Driver',
-                 'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
-                 'user': 'juan.pablo.zaldivar',
-                 'password': 'DB021202'}
-
-amos_properties = {'driver': 'org.postgresql.Driver',
-                'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
-                'user': 'juan.pablo.zaldivar',
-                'password': 'DB021202'}
-
-# dbw_properties = {'driver': 'org.postgresql.Driver',
-#              'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
-#              'user': 'enric.millan.iglesias',
-#              'password': 'DB220303'}
-
-# amos_properties = {'driver': 'org.postgresql.Driver',
-#              'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
-#              'user': 'enric.millan.iglesias',
-#              'password': 'DB220303'}
 
 
 def read_saved_pipelines(spark: SparkSession, model_name: str = None):
@@ -82,41 +58,6 @@ def read_saved_pipelines(spark: SparkSession, model_name: str = None):
             sys.exit(1)
 
 
-def select_model():
-    """
-    .
-    """
-
-    print(f'{Fore.YELLOW}Select the model from the following list: \n \t - DecisionTree \n \t - RandomForest \n \t - Default (Best accuracy model){Fore.RESET}')
-
-    model_name = input('Model: ')
-
-    if model_name not in ['DecisionTree', 'RandomForest', 'Default']:
-        print(f'{Fore.RED}Invalid model name, try any of the following: DecisionTree, RandomForest{Fore.RESET}')
-        sys.exit(1)
-
-    if model_name == 'Default':
-        model_name = None
-    return model_name
-
-
-def pipeline_stage():
-    """
-    .
-    """
-
-    try:
-        stage = sys.argv[1]
-        if stage not in ['all', 'management', 'analysis', 'classifier']:
-            print(f'{Fore.RED}Invalid stage argument, try any of the following: all, management, analysis, classifier{Fore.RESET}')
-            sys.exit(1)
-    except IndexError:
-        stage = 'all'
-        print(f'{Fore.YELLOW}No stage argument provided, running all stages{Fore.RESET}')
-
-    return stage
-
-
 ##############################################################################################################
 #                                                                                                            #
 # Main                                                                                                       #
@@ -124,6 +65,13 @@ def pipeline_stage():
 ##############################################################################################################
 
 if __name__== '__main__':
+    user, password, python_version, stage, model_name = read_arguments()
+    
+    HADOOP_HOME = './resources/hadoop_home'
+    JDBC_JAR = './resources/postgresql-42.2.8.jar'
+    PYSPARK_PYTHON = f'python3.{python_version}'
+    PYSPARK_DRIVER_PYTHON = f'python3.{python_version}'
+
     os.environ['HADOOP_HOME'] = HADOOP_HOME
     sys.path.append(HADOOP_HOME + '\\bin')
     os.environ['PYSPARK_PYTHON'] = PYSPARK_PYTHON
@@ -136,7 +84,15 @@ if __name__== '__main__':
 
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
     
-    stage = pipeline_stage()
+    dbw_properties = {'driver': 'org.postgresql.Driver',
+                 'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
+                 'user': f'{user}',
+                 'password': f'{password}'}
+
+    amos_properties = {'driver': 'org.postgresql.Driver',
+                'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/AMOS?sslmode=require',
+                'user': f'{user}',
+                'password': f'{password}'}
 
     if stage == 'all':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
@@ -152,9 +108,7 @@ if __name__== '__main__':
     
     print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
     if stage == 'classifier':
-        model_name = select_model()
         matrix, model = read_saved_pipelines(spark, model_name)
-        # print(matrix)
     classifier_pipe(model, matrix)
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
