@@ -38,26 +38,21 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 ##############################################################################################################
 
 
-def read_saved_model(model_name: str = None, model_path: str = './models/'):
+def read_saved_model(model_name: str, model_path: str = './models/'):
     """
     .
     """
     
-    if model_name == 'Default':
-        with open(model_path + 'classifiers.txt', 'r') as f:
+    model_name = model_name + 'ClassificationModel'
+
+    with open(model_path + 'classifiers.txt', 'r') as f:
+        found = False
+        while not found:
             line = f.readline()
             model = line.split(':')[0].strip()
-    else:
-        model_name = model_name + 'ClassificationModel'
 
-        with open(model_path + 'classifiers.txt', 'r') as f:
-            found = False
-            while not found:
-                line = f.readline()
-                model = line.split(':')[0].strip()
-
-                if model == model_name:
-                    found = True
+            if model == model_name or model_name == 'DefaultClassificationModel':
+                found = True
 
 
     return mlflow.spark.load_model(model_path + model)
