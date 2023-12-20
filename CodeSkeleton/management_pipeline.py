@@ -60,7 +60,7 @@ def format_columns(matrix: DataFrame) -> DataFrame:
     return matrix
 
 
-def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) -> DataFrame:
+def join_dataframes(sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) -> DataFrame:
     """
     Joins the sensor measurements, the KPIs and the labels, and returns a DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
 
@@ -89,8 +89,6 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         ),
         'inner').drop('aircraftid', 'timeid').cache()
     
-    # print(matrix.count())
-    
     matrix = matrix.withColumn('date', col('date').cast('date'))
     labels = labels.withColumn('starttime', col('starttime').cast('date'))
 
@@ -102,42 +100,14 @@ def join_dataframes(spark: SparkSession, sensor_data: DataFrame, kpis: DataFrame
         ),
         'left').cache()
     
-    # print(matrix.count())
-
     matrix = matrix.withColumn('label', expr('CASE WHEN aircraftregistration IS NOT NULL THEN 1 ELSE 0 END'))
-
     matrix = matrix.drop('aircraftregistration', 'starttime')
-
-    # ...
     matrix = matrix.dropDuplicates(['aircraft id', 'date'])
-
-    # print(matrix.count())
-    
-    # matrix.createOrReplaceTempView("matrix")
-    # labels.createOrReplaceTempView("labels")
-
-    # matrix = spark.sql("""
-    #     SELECT
-    #         matrix.*,
-    #                    CASE WHEN EXISTS (
-    #                         SELECT
-    #                             COUNT(*)
-    #                         FROM 
-    #                             labels l2, matrix m2
-    #                         WHERE l2.starttime BETWEEN m2.date AND DATE_ADD(m2.date, 7) AND l2.aircraftregistration = m2.`aircraft id`
-    #                     ) THEN 1 ELSE 0 END AS label
-    #     FROM
-    #         matrix
-    #     LEFT JOIN
-    #         labels
-    #     ON
-    #         matrix.`aircraft id` = labels.aircraftregistration AND matrix.date = labels.starttime
-    #     """)
 
     return format_columns(matrix)
 
 
-def extract_labels(spark: SparkSession, amos_properties: dict, record: tuple = None) -> DataFrame:
+def extract_labels(spark: SparkSession, amos_properties: dict) -> DataFrame:
     """
     Extracts the maintenance labels from the AMOS database and returns a DataFrame with the aircraft registration, the date and the label.
 
@@ -158,16 +128,10 @@ def extract_labels(spark: SparkSession, amos_properties: dict, record: tuple = N
                            table='oldinstance.operationinterruption',
                            properties=amos_properties)
 
-    # print(labels.count())
     labels = labels.where(col('subsystem') == '3453')
-    # print(labels.count())
-    # labels = labels.withColumn('label', lit(1))
     labels = labels.withColumn('starttime', to_date(col('starttime'), 'yyyy-MM-dd'))
-    # labels = labels.select('aircraftregistration', 'starttime', 'label')
     labels = labels.select('aircraftregistration', 'starttime')
-    # labels = labels.groupBy('aircraftregistration', 'starttime').agg(lit(1).alias('label'))
-    # print(labels.count())
-    
+
     return labels
 
 
@@ -191,20 +155,17 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict, record: tuple = N
     kpis = spark.read.jdbc(url=dbw_properties["url"],
                            table="public.aircraftutilization",
                            properties=dbw_properties)
-    # print(kpis.count())
-    # kpis = kpis.groupBy('aircraftid', 'timeid').agg(
-    #     sum('flighthours').alias('flighthours'),
-    #     sum('flightcycles').alias('flightcycles'),
-    #     sum('delayedminutes').alias('delayedminutes'),
-    # )
-    # print(kpis.count()) 
 
     kpis = kpis.select('aircraftid', 'timeid', 'flighthours', 'flightcycles', 'delayedminutes')
+    
+    if record is not None:
+        kpis = kpis.where(col('aircraftid') == record[0])
+        kpis = kpis.where(col('timeid') == record[1])
 
     return kpis
 
 
-def extract_sensor_data(spark: SparkSession, filepath: str, record: tuple = None) -> DataFrame:
+def extract_sensor_data(spark: SparkSession, filepath: str = './resources/trainingData/', record: tuple = None) -> DataFrame:
     """
     Extracts the sensor measurements from the CSV files and returns a DataFrame with the average measurement per flight per day.
 
@@ -232,6 +193,9 @@ def extract_sensor_data(spark: SparkSession, filepath: str, record: tuple = None
         if file.endswith('.csv'):
             aircraft_id = extract_aircraft_id(file)
             
+            if record is not None and aircraft_id != record[0]:
+                continue
+
             df = spark.read.option('header', 'true').option('delimiter', ';').csv(filepath + file)
             df = df.withColumn('date', substring('date', 1, 10))
             df = df.withColumn('aircraft id', lit(aircraft_id))
@@ -249,6 +213,9 @@ def extract_sensor_data(spark: SparkSession, filepath: str, record: tuple = None
 
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
+    if record is not None:
+        sensors = sensors.where(col('date') == record[1])
+
     return sensors
 
 
@@ -261,7 +228,7 @@ def read_saved_matrix(spark: SparkSession) -> DataFrame:
     return format_columns(matrix)
 
 
-def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, stage: str, filepath: str = './resources/trainingData/', save: bool = True, record: tuple = None) -> DataFrame:
+def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, record: tuple = None, save: bool = True) -> DataFrame:
     """
     Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
 
@@ -282,11 +249,11 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         Matrix with the gathered data.
     """
     
-    if os.path.exists('./resources/matrix') and record is None and stage in ['all', 'management']:
+    if os.path.exists('./resources/matrix') and record is None:
         matrix = read_saved_matrix(spark)
     else:
         print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
-        sensor_data = extract_sensor_data(spark, filepath, record).cache()
+        sensor_data = extract_sensor_data(spark=spark, record=record).cache()
         # print(sensor_data.count())
         
         print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
@@ -294,14 +261,14 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         # print(kpis.count())
 
         print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
-        labels = extract_labels(spark, amos_properties, record).cache()
+        labels = extract_labels(spark, amos_properties).cache()
         # print(labels.count())
 
         print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
-        matrix = join_dataframes(spark, sensor_data, kpis, labels)
+        matrix = join_dataframes(sensor_data, kpis, labels)
 
         # print(1)
-        if save:
+        if save and record is None:
             print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
             matrix.write.csv('./resources/matrix', header=True)
         # print(2)

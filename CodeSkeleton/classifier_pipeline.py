@@ -28,6 +28,7 @@ The steps are the following:
 import mlflow
 from colorama import Fore
 from pyspark.ml import Pipeline 
+import management_pipeline as mp
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 
@@ -85,27 +86,39 @@ def format_record(record):
     return record.select('features')
 
 
-def extract_record(day: str, aircraft: str, matrix: DataFrame):
+def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties: dict):
     """
-    Extracts the record for the given day and aircraft.
-
-    Parameters
-    ----------
-    day : str
-        Day to extract the record.
-    aircraft : str
-        Aircraft to extract the record.
-
-    Returns
-    -------
-    record : pandas.DataFrame
-        Record for the given day and aircraft.
+    .
     """
 
-    record = matrix.filter(matrix['date'] == day).filter(matrix['aircraft id'] == aircraft)
-    record = record.select('aircraft id', 'date', 'avg_sensor', 'flighthours', 'flightcycles', 'delayedminutes')
+    print(f'{Fore.YELLOW}Completing record with sensor data...{Fore.RESET}')
+    sensor_data = mp.extract_sensor_data(spark=spark, record=(aircraft, day))
+    
+    if sensor_data.count() == 0:
+        print(f'{Fore.RED}No sensor data for aircraft {aircraft} on day {day}.{Fore.RESET}')
+        return None, True
 
-    return record
+    print(f'{Fore.YELLOW}Completing record with KPIs data...{Fore.RESET}')
+    kpis = mp.extract_dw_data(spark, dbw_properties, (aircraft, day))
+
+    if kpis.count() == 0:
+        print(f'{Fore.RED}No KPIs data for aircraft {aircraft} on day {day}.{Fore.RESET}')
+        return None, True
+
+    print(f'{Fore.YELLOW}Joining information...{Fore.RESET}')
+    record = sensor_data.join(
+        kpis,
+        (
+            (sensor_data['aircraft id'] == kpis['aircraftid']) &
+            (sensor_data['date'] == kpis['timeid'])
+        ),
+        'inner').drop('aircraftid', 'timeid')
+    
+    if record.count() == 0:
+        print(f'{Fore.RED}No common data from sensor and KPIs for aircraft {aircraft} on day {day}.{Fore.RESET}')
+        return None, True
+
+    return format_record(record), False
 
 
 def valid_input(day: str, aircraft: str):
@@ -139,29 +152,30 @@ def valid_input(day: str, aircraft: str):
     return valid
 
 
-def classifier_pipe(model, matrix: DataFrame):
+def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
     """
     ...
     """
 
+    first = True
     day = input('Enter a day (YYYY-MM-DD): ')
     aircraft = input('Enter an aircraft (XX-XXX): ')
 
-    while valid_input(day, aircraft):
+    while valid_input(day, aircraft) or first:
+        first = False
         try:
-            record = extract_record(day, aircraft, matrix)
-            formatted_record = format_record(record)
+            record, empty = extract_record(spark, day, aircraft, dbw_properties)
 
-            prediction = model.transform(formatted_record)
-
-            pred = prediction.select("prediction").first()[0]
-            if pred == 0.0:
-                pred = 'No maintenance'
-            else:
-                pred = 'Maintenance'
-            print(f'{Fore.YELLOW}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
-        except:
-            print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}.{Fore.RESET}')
+            if not empty:
+                prediction = model.transform(record)
+                pred = prediction.select("prediction").first()[0]
+                if pred == 0.0:
+                    pred = 'No maintenance'
+                else:
+                    pred = 'Maintenance'
+                print(f'{Fore.MAGENTA}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
+        except Exception as e:
+            print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
 
         day = input('Enter a day (YYYY-MM-DD): ')
         aircraft = input('Enter an aircraft (XX-XXX): ')

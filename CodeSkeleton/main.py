@@ -53,8 +53,8 @@ def read_saved_pipelines(spark: SparkSession, model_name: str = None):
     if stage == 'classifier':
         try:
             return read_saved_matrix(spark), read_saved_model(model_name)
-        except:
-            print(f'{Fore.RED}Error reading the matrix and/or the model from the resources folder. Try executing the management and analysis pipelines first.{Fore.RESET}')
+        except Exception as e:
+            print(f'{Fore.RED}Error reading the matrix and/or the model from the resources folder. Try executing the management and analysis pipelines first: {e}{Fore.RESET}')
             sys.exit(1)
 
 
@@ -94,10 +94,10 @@ if __name__== '__main__':
                 'user': f'{user}',
                 'password': f'{password}'}
 
-    
+
     if stage == 'all':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
-        matrix = managment_pipe(spark, dbw_properties, amos_properties, stage)
+        matrix = managment_pipe(spark, dbw_properties, amos_properties)
         print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
     if stage == 'all' or stage == 'analysis':
@@ -110,7 +110,7 @@ if __name__== '__main__':
     print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
     if stage == 'classifier':
         matrix, model = read_saved_pipelines(spark, model_name)
-    classifier_pipe(model, matrix)
+    classifier_pipe(spark, model, dbw_properties)
     print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
 
