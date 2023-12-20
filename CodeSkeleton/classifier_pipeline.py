@@ -139,7 +139,7 @@ def valid_input(day: str, aircraft: str):
     return valid
 
 
-def classifier_pipe(model, matrix: DataFrame, model_path: str = './models/'):
+def classifier_pipe(model, matrix: DataFrame):
     """
     ...
     """
@@ -149,10 +149,6 @@ def classifier_pipe(model, matrix: DataFrame, model_path: str = './models/'):
 
     while valid_input(day, aircraft):
         try:
-            # conectar a DW
-            # extraer datos
-
-
             record = extract_record(day, aircraft, matrix)
             formatted_record = format_record(record)
 

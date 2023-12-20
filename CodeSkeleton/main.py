@@ -94,6 +94,7 @@ if __name__== '__main__':
                 'user': f'{user}',
                 'password': f'{password}'}
 
+    
     if stage == 'all':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
         matrix = managment_pipe(spark, dbw_properties, amos_properties, stage)
