@@ -206,14 +206,13 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
             else:
                 df_set[aircraft_id] = df
 
-    ####################################################
     sensors = df_set[list(df_set.keys())[0]]
     for i in range(1, len(df_set)):
         sensors = sensors.union(df_set[list(df_set.keys())[i]])
 
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 
-    if record is not None:
+    if record is not None:  # Filter by record date if specified
         sensors = sensors.where(col('date') == record[1])
 
     return sensors

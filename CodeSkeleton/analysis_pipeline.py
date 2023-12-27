@@ -136,11 +136,11 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         List of trained classifiers.
     """
   
-    matrix, num_features = format_matrix(matrix)
-    
     mlflow.set_experiment(experiment_name)
 
     train, test = matrix.randomSplit([0.8, 0.2], seed=s)
+    train, train_features = format_matrix(train)
+    test, _ = format_matrix(test)
 
     with mlflow.start_run():
 
@@ -151,14 +151,13 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         sorted_classifiers = []
         
         for c in classifiers:
-            # model_name = c.stages[0].__class__.__name__
             model_name = c.__class__.__name__
             
             mlflow.spark.log_model(c, model_name)
-            mlflow.log_params({'num_features': num_features})
+            mlflow.log_params({'num_features': train_features})
 
             acc, rec = evaluate_and_log_metrics(c, test)
-            sorted_classifiers.append((model_name, acc, rec))
+            sorted_classifiers.append((c, acc, rec))
 
             mlflow.spark.save_model(c, 'models/' + model_name)
 
@@ -168,6 +167,6 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
 
     with open('models/classifiers.txt', 'w') as f:
         for c in sorted_classifiers:
-            f.write(f'{c[0]}: {c[1]} {c[2]}\n')
+            f.write(f'{c[0].__class__.__name__}: {c[1]} {c[2]}\n')
 
     return sorted_classifiers[0][0], sorted_classifiers

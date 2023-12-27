@@ -174,6 +174,8 @@ def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
                 else:
                     pred = 'Maintenance'
                 print(f'{Fore.MAGENTA}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
+            else:
+                print(f'{Fore.RED}No available data for aircraft {aircraft} on day {day}. Try another aircraft or day.{Fore.RESET}')
         except Exception as e:
             print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
 
