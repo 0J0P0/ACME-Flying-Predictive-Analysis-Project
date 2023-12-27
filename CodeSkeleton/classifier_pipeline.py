@@ -62,7 +62,7 @@ def read_saved_model(model_name: str, model_path: str = './models/'):
         found = False
         while not found:
             line = f.readline()
-            model = line.split(':')[0].strip()
+            model = line.split(',')[0].strip()
 
             # DefaultClassificationModel is the first model in the file, thus the best one
             if model == model_name or model_name == 'DefaultClassificationModel':
@@ -198,25 +198,24 @@ def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
     None    
     """
 
-    first = True
-    day = input('Enter a day (YYYY-MM-DD): ')
-    aircraft = input('Enter an aircraft (XX-XXX): ')
+    day = input('Enter a day (YYYY-MM-DD) or "exit" to end: ')
+    aircraft = input('Enter an aircraft (XX-XXX) or "exit" to end: ')
 
-    while valid_input(day, aircraft) or first:
-        first = False
-        try:
-            record, empty = extract_record(spark, day, aircraft, dbw_properties)
+    while day != 'exit' and aircraft != 'exit':
+        if valid_input(day, aircraft):
+            try:
+                record, empty = extract_record(spark, day, aircraft, dbw_properties)
 
-            if not empty:
-                prediction = model.transform(record)
-                pred = prediction.select("prediction").first()[0]
-                if pred == 0.0:
-                    pred = 'No maintenance'
-                else:
-                    pred = 'Maintenance'
-                print(f'{Fore.MAGENTA}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
-        except Exception as e:
-            print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
+                if not empty:
+                    prediction = model.transform(record)
+                    pred = prediction.select("prediction").first()[0]
+                    if pred == 0.0:
+                        pred = 'No maintenance'
+                    else:
+                        pred = 'Maintenance'
+                    print(f'{Fore.MAGENTA}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
+            except Exception as e:
+                print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
 
         day = input('Enter a day (YYYY-MM-DD): ')
         aircraft = input('Enter an aircraft (XX-XXX): ')

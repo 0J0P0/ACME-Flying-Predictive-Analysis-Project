@@ -48,14 +48,12 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
                                                    metricName='accuracy')
     
     acc = evaluator1.evaluate(classifier.transform(test))
-    mlflow.log_metrics({'accuracy': acc})
 
     evaluator2 = MulticlassClassificationEvaluator(labelCol='label',
                                                    predictionCol='prediction',
                                                    metricName='weightedRecall')
     
     recall = evaluator2.evaluate(classifier.transform(test))
-    mlflow.log_metrics({'recall': recall})
 
     return acc, recall
 
@@ -153,20 +151,21 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         for c in classifiers:
             model_name = c.__class__.__name__
             
-            mlflow.spark.log_model(c, model_name)
-            mlflow.log_params({'num_features': train_features})
+            c_info = mlflow.spark.log_model(c, model_name)
 
             acc, rec = evaluate_and_log_metrics(c, test)
-            sorted_classifiers.append((c, acc, rec))
+            mlflow.log_metrics({'num_features': train_features, 'accuracy': acc, 'recall': rec})
+
+            sorted_classifiers.append((c, c_info, acc, rec))
 
             mlflow.spark.save_model(c, 'models/' + model_name)
 
     mlflow.end_run()
 
-    sorted_classifiers.sort(key=lambda x: x[1], reverse=True)
+    sorted_classifiers.sort(key=lambda x: x[2], reverse=True)
 
     with open('models/classifiers.txt', 'w') as f:
         for c in sorted_classifiers:
-            f.write(f'{c[0].__class__.__name__}: {c[1]} {c[2]}\n')
+            f.write(f'{c[0].__class__.__name__},{c[1].model_uri},{c[2]},{c[3]}\n')
 
     return sorted_classifiers[0][0], sorted_classifiers
