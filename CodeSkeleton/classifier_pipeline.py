@@ -8,15 +8,15 @@
 
 
 """
-This pipepline recieves an aircraft and a day, replicates the process of the analysis pipleine to generate a 
-record and then uses the best model to classify the record in maintenance or no maintenance.
+This pipepline recieves multiple inputs of the form (aircraft, day) and makes a maintenance prediction. First it validates the input, then it completes the record with the sensor and KPIs data, and finally it makes a prediction with the selected model. 
 
 The steps are the following:
 - Recieve an aircraft and a day.
-- Generate a record with that aircraft and day.
-- Format the record so it can be used by the model.
-- Load the best model.
-- Make a prdiction with the record and the model.
+- Validate the input.
+- Complete the record with the sensor and KPIs data.
+- Make a prediction with the selected model.
+
+If the input is not valid, the pipeline will ask for a new input. If the record is not complete, the pipeline will show an error message and ask for a new input.
 """
 
 ##############################################################################################################
@@ -41,7 +41,19 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 
 def read_saved_model(model_name: str, model_path: str = './models/'):
     """
-    .
+    Reads the model from the available models.
+
+    Parameters
+    ----------
+    model_name : str
+        Name of the model to read.
+    model_path : str
+        Path to the models folder.
+
+    Returns
+    -------
+    model : pyspark.ml.PipelineModel
+        Model read.
     """
     
     model_name = model_name + 'ClassificationModel'
@@ -52,9 +64,9 @@ def read_saved_model(model_name: str, model_path: str = './models/'):
             line = f.readline()
             model = line.split(':')[0].strip()
 
+            # DefaultClassificationModel is the first model in the file, thus the best one
             if model == model_name or model_name == 'DefaultClassificationModel':
                 found = True
-
 
     return mlflow.spark.load_model(model_path + model)
 
@@ -65,7 +77,7 @@ def format_record(record: DataFrame):
 
     Parameters
     ----------
-    record : pandas.DataFrame
+    record : pyspark.sql.DataFrame
         Record to format.
 
     Returns
@@ -88,7 +100,23 @@ def format_record(record: DataFrame):
 
 def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties: dict):
     """
-    .
+    Extracts the record from the available data.
+
+    Parameters
+    ----------
+    spark : pyspark.sql.SparkSession
+        Spark session.
+    day : str
+        Day to extract.
+    aircraft : str
+        Aircraft to extract.
+    dbw_properties : dict
+        Dictionary with the properties to connect to the database.
+
+    Returns
+    -------
+    record : pyspark.sql.DataFrame
+        Record extracted.
     """
 
     print(f'{Fore.YELLOW}Completing record with sensor data...{Fore.RESET}')
@@ -154,7 +182,20 @@ def valid_input(day: str, aircraft: str):
 
 def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
     """
-    ...
+    Run-time classifier pipeline. Recieves multiple inputs of the form (aircraft, day) and makes if the aircraft is going for unscheduled maintenance or not.
+
+    Parameters
+    ----------
+    spark : pyspark.sql.SparkSession
+        Spark session.
+    model : pyspark.ml.PipelineModel
+        Model to use.
+    dbw_properties : dict
+        Dictionary with the properties to connect to the database.
+
+    Returns
+    -------
+    None    
     """
 
     first = True
@@ -174,8 +215,6 @@ def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
                 else:
                     pred = 'Maintenance'
                 print(f'{Fore.MAGENTA}Prediction for aircraft {aircraft} on day {day}: {pred}{Fore.RESET}')
-            else:
-                print(f'{Fore.RED}No available data for aircraft {aircraft} on day {day}. Try another aircraft or day.{Fore.RESET}')
         except Exception as e:
             print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
 

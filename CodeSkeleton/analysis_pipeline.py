@@ -10,10 +10,10 @@
 """
 This pipeline trains a set of classifiers to predict unscheduled maintenance for a given aircraft. The pipeline is composed of the following steps:
 
-    - Format the data.
-    - Train the classifiers.
-    - Evaluate the classifiers.
-    - Log the metrics and save the classifiers.
+- Format the data.
+- Train the classifiers.
+- Evaluate the classifiers.
+- Log the metrics and save the classifiers.
 """
 
 ##############################################################################################################

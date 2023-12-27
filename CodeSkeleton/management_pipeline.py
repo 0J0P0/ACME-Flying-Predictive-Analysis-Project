@@ -10,10 +10,10 @@
 """
 This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. Thus, this pipeline must:
 
-    - Read the sensor measurements (extracted from the CSV files) related to a certain aircraft A and average it per day.
-    - Once you have the average measurement of the sensor per day, enrich it with the KPIs related to A from the Data Warehouse (at the same granularity level).
-    - Importantly, since we are going to use supervised learning (see the Data Analysis Pipeline below), we need to label each row with a label: either unscheduled maintenance or no maintenance predicted in the next 7 days for that flight.
-    - Generate a matrix with the gathered data and store it.
+- Read the sensor measurements (extracted from the CSV files) related to a certain aircraft A and average it per day.
+-Enrich the sensor measurements with the KPIs from the Data Warehouse.
+- Label each row with a label: either unscheduled maintenance or no maintenance predicted in the next 7 days for that flight.
+- Generate a matrix with the gathered data and store it.
 """
 
 ##############################################################################################################
@@ -36,7 +36,7 @@ from pyspark.sql.functions import avg, lit, to_date, col, substring, expr, date_
 
 def format_columns(matrix: DataFrame) -> DataFrame:
     """
-    Formats the matrix so that the columns are the FH, FC and DM KPIs, and the average measurement of the 3453 sensor, and the label.
+    Formats the matrix so that the columns are the aircraft id, day, FH, FC and DM KPIs, and the average measurement of the 3453 sensor, and the label.
 
     Parameters
     ----------
@@ -145,6 +145,8 @@ def extract_dw_data(spark: SparkSession, dbw_properties: dict, record: tuple = N
         SparkSession object.
     dbw_properties : dict
         Dictionary with the properties to connect to the Data Warehouse.
+    record : tuple, optional
+        Record to extract, by default None.
 
     Returns
     -------
@@ -171,10 +173,12 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
 
     Parameters
     ----------
-    filepath : str
-        Path to the folder where the csv files are stored.
     spark : SparkSession
         SparkSession object.
+    filepath : str
+        Path to the folder where the csv files are stored.
+    record : tuple, optional
+        Record to extract, by default None.
 
     Returns
     -------
@@ -193,7 +197,7 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
         if file.endswith('.csv'):
             aircraft_id = extract_aircraft_id(file)
             
-            if record is not None and aircraft_id != record[0]:
+            if record is not None and aircraft_id != record[0]: # Filter by aircraft id if specified
                 continue
 
             df = spark.read.option('header', 'true').option('delimiter', ';').csv(filepath + file)
@@ -220,7 +224,17 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
 
 def read_saved_matrix(spark: SparkSession) -> DataFrame:
     """
-    .
+    Reads the matrix from the resources folder and returns a DataFrame with the gathered data.
+
+    Parameters
+    ----------
+    spark : SparkSession
+        SparkSession object.
+
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        Matrix with the gathered data.
     """
 
     matrix = spark.read.csv('./resources/matrix', header=True)
@@ -241,6 +255,10 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         Dictionary with the properties to connect to the Data Warehouse.
     amos_properties : dict
         Dictionary with the properties to connect to the AMOS database.
+    record : tuple, optional
+        Record to extract, by default None.
+    save : bool, optional
+        Whether to save the matrix or not, by default True.
 
     Returns
     -------
@@ -253,26 +271,18 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
     else:
         print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
         sensor_data = extract_sensor_data(spark=spark, record=record).cache()
-        # print(sensor_data.count())
         
         print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
         kpis = extract_dw_data(spark, dbw_properties, record).cache()
-        # print(kpis.count())
 
         print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
         labels = extract_labels(spark, amos_properties).cache()
-        # print(labels.count())
 
         print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
         matrix = join_dataframes(sensor_data, kpis, labels)
 
-        # print(1)
         if save and record is None:
             print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
             matrix.write.csv('./resources/matrix', header=True)
-        # print(2)
-
-        # matrix = spark.read.csv('./resources/matrix', header=True)
-        # matrix = format_columns(matrix)
 
     return matrix
