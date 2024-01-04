@@ -37,7 +37,6 @@ from management_pipeline import managment_pipe, read_saved_matrix
 #                                                                                                            #
 ##############################################################################################################
 
-
 def read_saved_pipelines(spark: SparkSession, model_name: str = None):
     """
     .
@@ -81,9 +80,10 @@ if __name__== '__main__':
     conf.set('spark.master', 'local[*]')
     conf.set('spark.app.name','DBALab')
     conf.set('spark.jars', JDBC_JAR)
+   
 
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    
+    spark.sparkContext.setLogLevel('OFF')
     dbw_properties = {'driver': 'org.postgresql.Driver',
                  'url': 'jdbc:postgresql://postgresfib.fib.upc.edu:6433/DW?sslmode=require',
                  'user': f'{user}',
