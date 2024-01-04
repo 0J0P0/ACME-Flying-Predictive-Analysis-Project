@@ -58,7 +58,7 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     return acc, recall
 
 
-def train_model(data:DataFrame, models: list, k: int = 3, s: int = 487) -> list:
+def train_model(data:DataFrame, models: list, k: int = 3, s: int = 69) -> list:
     """
     ---
     """
@@ -115,7 +115,7 @@ def format_matrix(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label'), num_features
 
 
-def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 487):
+def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 69):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -140,6 +140,7 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
     train, train_features = format_matrix(train)
     test, _ = format_matrix(test)
 
+    print(f'{Fore.YELLOW}Training the classifiers...{Fore.RESET}')
     with mlflow.start_run():
 
         models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
@@ -147,23 +148,26 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
 
         classifiers = train_model(train, models)
         sorted_classifiers = []
-        
+    
+        print(f'{Fore.YELLOW}Evaluating the classifiers...{Fore.RESET}')
         for c in classifiers:
             model_name = c.__class__.__name__
             
             c_info = mlflow.spark.log_model(c, model_name)
 
+            print(f'{Fore.YELLOW}Evaluating {model_name}...{Fore.RESET}')
             acc, rec = evaluate_and_log_metrics(c, test)
             mlflow.log_metrics({'num_features': train_features, 'accuracy': acc, 'recall': rec})
 
             sorted_classifiers.append((c, c_info, acc, rec))
 
             mlflow.spark.save_model(c, 'models/' + model_name)
-
     mlflow.end_run()
 
+    print(f'{Fore.YELLOW}Sorting the classifiers...{Fore.RESET}')
     sorted_classifiers.sort(key=lambda x: x[2], reverse=True)
 
+    print(f'{Fore.YELLOW}Saving the classifiers...{Fore.RESET}')
     with open('models/classifiers.txt', 'w') as f:
         for c in sorted_classifiers:
             f.write(f'{c[0].__class__.__name__},{c[1].model_uri},{c[2]},{c[3]}\n')
