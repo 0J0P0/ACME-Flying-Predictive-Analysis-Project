@@ -122,7 +122,7 @@ def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties:
     print(f'{Fore.YELLOW}Completing record with sensor data...{Fore.RESET}')
     sensor_data = mp.extract_sensor_data(spark=spark, record=(aircraft, day))
     
-    if sensor_data.count() == 0:
+    if sensor_data is None or sensor_data.count() == 0:
         print(f'{Fore.RED}No sensor data for aircraft {aircraft} on day {day}.{Fore.RESET}')
         return None, True
 

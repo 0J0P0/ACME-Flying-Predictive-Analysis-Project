@@ -210,6 +210,9 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
             else:
                 df_set[aircraft_id] = df
 
+    if list(df_set.keys()) == []:
+        return None
+
     sensors = df_set[list(df_set.keys())[0]]
     for i in range(1, len(df_set)):
         sensors = sensors.union(df_set[list(df_set.keys())[i]])

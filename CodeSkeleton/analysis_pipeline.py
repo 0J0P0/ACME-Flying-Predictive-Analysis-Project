@@ -58,7 +58,7 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     return acc, recall
 
 
-def train_model(data:DataFrame, models: list, k: int = 3, s: int = 42) -> list:
+def train_model(data:DataFrame, models: list, k: int = 3, s: int = 487) -> list:
     """
     ---
     """
@@ -115,7 +115,7 @@ def format_matrix(matrix: DataFrame) -> DataFrame:
     return matrix.select('features', 'label'), num_features
 
 
-def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 42):
+def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 487):
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
