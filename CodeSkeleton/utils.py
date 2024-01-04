@@ -1,11 +1,28 @@
-import sys
 import argparse
 from colorama import Fore
 
 
 def read_arguments():
     """
-    .
+    Reads the arguments passed to the script. If no arguments are passed, the default values are used. The required arguments are the database user and password.
+
+    Returns
+    -------
+    DBuser : str
+        Database user.
+    DBpassword : str
+        Database password.
+    python_version : str
+        Python version to use.
+    stage : str
+        Stage to run.
+    model : str
+        Model to use.
+
+    Raises
+    ------
+    argparse.ArgumentError
+        If the arguments are not valid.
     """
 
     parser = argparse.ArgumentParser()
