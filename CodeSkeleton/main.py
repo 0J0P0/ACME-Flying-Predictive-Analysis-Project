@@ -8,14 +8,7 @@
 
 
 """
-This is the main file of the project. It is used to call the different pipelines. 
-
-Its operation requires a sequence of parameters to define necessary configuration settings and credentials to access the databases.
-    - Database User: The username or identifier used to access the database.
-    - Database Password: The password associated with the provided database user.
-    - Python version: The specific version of Python intended to be used.
-    - Pipeline stage: Specifies the stage in the pipeline to be executed (options: 'all', 'management', 'analysis', 'classifier').
-    - Model: Indicates the type of model to be utilized for prediction (options: 'DecisionTree', 'RandomForest', 'Default'). The 'Default' option represents the best-selected model by default.
+This is the main file of the project. It is used to call the different pipelines.
 
 Usage
 -----
