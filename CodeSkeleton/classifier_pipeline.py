@@ -39,38 +39,6 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 ##############################################################################################################
 
 
-def read_saved_model(model_name: str, model_path: str = './models/'):
-    """
-    Reads the model from the available models.
-
-    Parameters
-    ----------
-    model_name : str
-        Name of the model to read.
-    model_path : str
-        Path to the models folder.
-
-    Returns
-    -------
-    model : pyspark.ml.PipelineModel
-        Model read.
-    """
-    
-    model_name = model_name + 'ClassificationModel'
-
-    with open(model_path + 'classifiers.txt', 'r') as f:
-        found = False
-        while not found:
-            line = f.readline()
-            model = line.split(',')[0].strip()
-
-            # DefaultClassificationModel is the first model in the file, thus the best one
-            if model == model_name or model_name == 'DefaultClassificationModel':
-                found = True
-
-    return mlflow.spark.load_model(model_path + model)
-
-
 def format_record(record: DataFrame):
     """
     Formats the record so it can be used by the model.

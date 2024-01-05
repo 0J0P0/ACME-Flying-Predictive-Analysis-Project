@@ -1,5 +1,5 @@
 import argparse
-from colorama import Fore
+from mlflow.tracking import MlflowClient
 
 
 def read_arguments():
@@ -56,3 +56,24 @@ def read_arguments():
     args = parser.parse_args()
 
     return args.DBuser, args.DBpassword, args.python_version, args.stage, args.model
+
+
+def create_or_load_experiment(client: MlflowClient, experiment_name: str) -> str:
+    """."""
+
+    experiment_description = (
+        "Predictive Analysis Project - Analysis Pipeline"
+    )
+
+    experiment_tags = {
+        "project_name": "Predictive Analysis Project",
+        "team": "Juan Pablo Zaldivar, Enric Millan",
+        "mlflow.note.content": experiment_description,
+    }
+
+    try:
+        experiment_id = client.create_experiment(name=experiment_name, tags=experiment_tags)
+    except :
+        experiment_id = client.get_experiment_by_name(name=experiment_name).experiment_id
+    
+    return experiment_id

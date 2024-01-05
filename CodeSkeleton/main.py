@@ -8,7 +8,13 @@
 
 
 """
-This is the main file of the project. It is used to call the different pipelines.
+This is the main file of the project. It is used to call the different pipelines. 
+Its operation requires a sequence of parameters to define necessary configuration settings and credentials to access the databases.
+    - Database User: The username or identifier used to access the database.
+    - Database Password: The password associated with the provided database user.
+    - Python version: The specific version of Python intended to be used.
+    - Pipeline stage: Specifies the stage in the pipeline to be executed (options: 'all', 'management', 'analysis', 'classifier').
+    - Model: Indicates the type of model to be utilized for prediction (options: 'DecisionTree', 'RandomForest', 'Default'). The 'Default' option represents the best-selected model by default.
 
 Usage
 -----
@@ -25,10 +31,12 @@ import os
 import sys
 from colorama import Fore
 from pyspark import SparkConf
-from pyspark.sql import SparkSession
 from utils import read_arguments
-from analysis_pipeline import analysis_pipe
-from classifier_pipeline import classifier_pipe, read_saved_model
+from pyspark.sql import SparkSession
+from mlflow.tracking import MlflowClient
+from utils import create_or_load_experiment
+from analysis_pipeline import analysis_pipe, select_best_classifier
+from classifier_pipeline import classifier_pipe
 from management_pipeline import managment_pipe, read_saved_matrix
 
 ##############################################################################################################
@@ -37,7 +45,7 @@ from management_pipeline import managment_pipe, read_saved_matrix
 #                                                                                                            #
 ##############################################################################################################
 
-def read_saved_pipelines(spark: SparkSession, model_name: str = None):
+def read_saved_pipelines(spark: SparkSession):
     """
     .
     """
@@ -51,7 +59,7 @@ def read_saved_pipelines(spark: SparkSession, model_name: str = None):
 
     if stage == 'classifier':
         try:
-            return read_saved_matrix(spark), read_saved_model(model_name)
+            return read_saved_matrix(spark), select_best_classifier(experiment_id=experiment_id, experiment_name=experiment_name)
         except Exception as e:
             print(f'{Fore.RED}Error reading the matrix and/or the model from the resources folder. Try executing the management and analysis pipelines first: {e}{Fore.RESET}')
             sys.exit(1)
@@ -80,6 +88,10 @@ if __name__== '__main__':
     conf.set('spark.master', 'local[*]')
     conf.set('spark.app.name','DBALab')
     conf.set('spark.jars', JDBC_JAR)
+
+    client = MlflowClient()
+    experiment_name = 'JPZaldivar_EnricMillan_BDA'
+    experiment_id = create_or_load_experiment(client, experiment_name)
    
 
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
@@ -95,22 +107,26 @@ if __name__== '__main__':
                 'password': f'{password}'}
 
 
-    if stage == 'all':
+    if stage == 'all' or stage == 'management':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
         matrix = managment_pipe(spark, dbw_properties, amos_properties)
         print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    if stage == 'all' or stage == 'analysis':
-        print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
-        if stage == 'analysis':
-            matrix = read_saved_pipelines(spark)
-        model, _ = analysis_pipe(matrix)
-        print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
-    
-    print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
-    if stage == 'classifier':
-        matrix, model = read_saved_pipelines(spark, model_name)
-    classifier_pipe(spark, model, dbw_properties)
-    print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    # count number of rows with label 1 and 0 in matrix
+    print(matrix.filter(matrix.label == 1).count(), matrix.filter(matrix.label == 0).count())
+
+    if stage != 'management':
+        if stage == 'all' or stage == 'analysis':
+            print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
+            if stage == 'analysis':
+                matrix = read_saved_pipelines(spark)
+            model, _ = analysis_pipe(matrix, experiment_id, client)
+            print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
+        
+        print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
+        if stage == 'classifier':
+            matrix, model = read_saved_pipelines(spark)
+        classifier_pipe(spark, model, dbw_properties)
+        print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
 
