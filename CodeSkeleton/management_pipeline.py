@@ -24,7 +24,6 @@ This pipeline generates a matrix where the rows denote the information of an air
 
 import os
 from colorama import Fore
-from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StringType, DoubleType, IntegerType
 from pyspark.sql.functions import avg, lit, to_date, col, substring, expr, date_add
@@ -214,7 +213,9 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
     if list(df_set.keys()) == []:
         return None
 
-    sensors = reduce(DataFrame.union, df_set.values())
+    sensors = df_set[list(df_set.keys())[0]]
+    for i in range(1, len(df_set)):
+        sensors = sensors.union(df_set[list(df_set.keys())[i]])
 
     sensors = sensors.groupBy("aircraft id", "date").agg(avg("value").alias("avg_sensor"))
 

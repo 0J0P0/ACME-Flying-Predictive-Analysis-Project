@@ -107,26 +107,22 @@ if __name__== '__main__':
                 'password': f'{password}'}
 
 
-    if stage == 'all' or stage == 'management':
+    if stage == 'all':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
         matrix = managment_pipe(spark, dbw_properties, amos_properties)
         print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    # count number of rows with label 1 and 0 in matrix
-    print(matrix.filter(matrix.label == 1).count(), matrix.filter(matrix.label == 0).count())
-
-    if stage != 'management':
-        if stage == 'all' or stage == 'analysis':
-            print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
-            if stage == 'analysis':
-                matrix = read_saved_pipelines(spark)
-            model, _ = analysis_pipe(matrix, experiment_id, client)
-            print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
-        
-        print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
-        if stage == 'classifier':
-            matrix, model = read_saved_pipelines(spark)
-        classifier_pipe(spark, model, dbw_properties)
-        print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    if stage == 'all' or stage == 'analysis':
+        print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
+        if stage == 'analysis':
+            matrix = read_saved_pipelines(spark)
+        model, _ = analysis_pipe(matrix, experiment_id, client)
+        print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
+    
+    print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
+    if stage == 'classifier':
+        matrix, model = read_saved_pipelines(spark)
+    classifier_pipe(spark, model, dbw_properties)
+    print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
 
