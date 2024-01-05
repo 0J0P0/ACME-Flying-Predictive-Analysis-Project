@@ -1,0 +1,2 @@
+RandomForestClassificationModel,runs:/b833fcb1098642aca775e85f1f36bcac/RandomForestClassificationModel,0.90625,0.90625
+DecisionTreeClassificationModel,runs:/b833fcb1098642aca775e85f1f36bcac/DecisionTreeClassificationModel,0.890625,0.890625
