@@ -112,9 +112,6 @@ if __name__== '__main__':
         matrix = managment_pipe(spark, dbw_properties, amos_properties)
         print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
-    # count number of rows with label 1 and 0 in matrix
-    print(matrix.filter(matrix.label == 1).count(), matrix.filter(matrix.label == 0).count())
-
     if stage != 'management':
         if stage == 'all' or stage == 'analysis':
             print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
