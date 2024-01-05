@@ -25,11 +25,13 @@ This pipeline trains a set of classifiers to predict unscheduled maintenance for
 import mlflow
 from colorama import Fore
 from pyspark.sql import DataFrame
+from mlflow.tracking import MlflowClient
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier
+
 
 ##############################################################################################################
 #                                                                                                            #
@@ -38,7 +40,37 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 ##############################################################################################################
 
 
-def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
+def select_best_classifier(experiment_id: str, client: MlflowClient = None, experiment_name: str = None) -> PipelineModel:
+    """."""
+
+    if client is not None:
+        best_model_info = client.search_runs(experiment_id, order_by=["metrics.accuracy DESC"], max_results=1)[0]
+        best_model = mlflow.spark.load_model(best_model_info.info.artifact_uri + "/model")
+    else:  # Runtime model selection
+        client = MlflowClient()
+        experiment = client.get_experiment_by_name(experiment_name)
+        runs = client.search_runs(experiment.experiment_id, order_by=["metrics.accuracy DESC"], max_results=1)
+        best_run = runs[0]
+        best_model = mlflow.spark.load_model(best_run.info.artifact_uri + "/model")
+    
+    return best_model
+
+
+def log_classifier(experiment_id: str, classifier: PipelineModel, num_features: int, metrics: tuple):
+    """
+    .
+    """
+
+    name = classifier.__class__.__name__
+
+    with mlflow.start_run(experiment_id=experiment_id, run_name=name):
+        mlflow.spark.log_model(classifier, 'model', registered_model_name=name)
+        mlflow.log_metrics({'accuracy': metrics[0], 'recall': metrics[1]})
+        mlflow.log_params({'num_features': num_features})  # faltan hiperparámetros
+        mlflow.end_run()
+
+
+def evaluate_classifier(classifier: PipelineModel, test: DataFrame):
     """
     ...
     """
@@ -55,7 +87,7 @@ def evaluate_and_log_metrics(classifier: PipelineModel, test: DataFrame):
     
     recall = evaluator2.evaluate(classifier.transform(test))
 
-    return acc, recall
+    return (acc, recall)
 
 
 def train_model(data:DataFrame, models: list, k: int = 3, s: int = 69) -> list:
@@ -81,6 +113,8 @@ def train_model(data:DataFrame, models: list, k: int = 3, s: int = 69) -> list:
         
         cvModel = cv.fit(data)
         classifiers.append(cvModel.bestModel)
+
+    print(f'{Fore.GREEN}Training finished.{Fore.RESET}')
 
     return classifiers
 
@@ -110,12 +144,11 @@ def format_matrix(matrix: DataFrame) -> DataFrame:
     matrix = pipeline.fit(matrix).transform(matrix)
 
     num_features = len(matrix.select('features').first()[0])
-    
-    # print(matrix.select('features', 'label').show(5))
+        
     return matrix.select('features', 'label'), num_features
 
 
-def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', s: int = 69):
+def analysis_pipe(matrix: DataFrame, experiment_id: str, client: MlflowClient, s: int = 69) -> tuple:
     """
     Trains a set of classifiers to predict unscheduled maintenance for a given aircraft.
 
@@ -134,41 +167,21 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
         List of trained classifiers.
     """
   
-    mlflow.set_experiment(experiment_name)
-
     train, test = matrix.randomSplit([0.8, 0.2], seed=s)
     train, train_features = format_matrix(train)
     test, _ = format_matrix(test)
 
-    with mlflow.start_run():
+    models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
+                RandomForestClassifier(labelCol='label', featuresCol='features')]
 
-        models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
-                  RandomForestClassifier(labelCol='label', featuresCol='features')]
+    classifiers = train_model(train, models)
 
-        print(f'{Fore.YELLOW}Training the classifiers...{Fore.RESET}')
-        classifiers = train_model(train, models)
-        sorted_classifiers = []
+    print(f'{Fore.YELLOW}Evaluating and logging the classifiers...{Fore.RESET}')
+    for c in classifiers:
+        metrics = evaluate_classifier(c, test)  # faltan hiperparámetros
+        log_classifier(experiment_id, c, train_features, metrics)
     
-        for c in classifiers:
-            model_name = c.__class__.__name__
-            
-            c_info = mlflow.spark.log_model(c, model_name)
+    print(f'{Fore.GREEN}Evaluation finished.{Fore.RESET}')
+    best_classifer = select_best_classifier(experiment_id, client)
 
-            print(f'{Fore.YELLOW}Evaluating {model_name}...{Fore.RESET}')
-            acc, rec = evaluate_and_log_metrics(c, test)
-            mlflow.log_metrics({'num_features': train_features, 'accuracy': acc, 'recall': rec})
-
-            sorted_classifiers.append((c, c_info, acc, rec))
-
-            mlflow.spark.save_model(c, 'models/' + model_name)
-    mlflow.end_run()
-
-    print(f'{Fore.YELLOW}Sorting the classifiers...{Fore.RESET}')
-    sorted_classifiers.sort(key=lambda x: x[2], reverse=True)
-
-    print(f'{Fore.YELLOW}Saving the classifiers...{Fore.RESET}')
-    with open('models/classifiers.txt', 'w') as f:
-        for c in sorted_classifiers:
-            f.write(f'{c[0].__class__.__name__},{c[1].model_uri},{c[2]},{c[3]}\n')
-
-    return sorted_classifiers[0][0], sorted_classifiers
+    return best_classifer, classifiers
