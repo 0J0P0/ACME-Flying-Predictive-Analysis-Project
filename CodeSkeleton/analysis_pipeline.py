@@ -140,16 +140,15 @@ def analysis_pipe(matrix: DataFrame, experiment_name: str = 'TrainClassifiers', 
     train, train_features = format_matrix(train)
     test, _ = format_matrix(test)
 
-    print(f'{Fore.YELLOW}Training the classifiers...{Fore.RESET}')
     with mlflow.start_run():
 
         models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
                   RandomForestClassifier(labelCol='label', featuresCol='features')]
 
+        print(f'{Fore.YELLOW}Training the classifiers...{Fore.RESET}')
         classifiers = train_model(train, models)
         sorted_classifiers = []
     
-        print(f'{Fore.YELLOW}Evaluating the classifiers...{Fore.RESET}')
         for c in classifiers:
             model_name = c.__class__.__name__
             
