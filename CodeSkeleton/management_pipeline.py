@@ -267,7 +267,7 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
     """
     
     if os.path.exists('./resources/matrix') and record is None:
-        matrix = read_saved_matrix(spark)
+        matrix = read_saved_matrix(spark).cache()
     else:
         print(f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
         sensor_data = extract_sensor_data(spark=spark, record=record)
@@ -279,7 +279,7 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         labels = extract_labels(spark, amos_properties)
 
         print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
-        matrix = join_dataframes(sensor_data, kpis, labels)
+        matrix = join_dataframes(sensor_data, kpis, labels).cache()
 
         if save and record is None:
             print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
