@@ -169,8 +169,9 @@ def analysis_pipe(matrix: DataFrame, experiment_id: str, client: MlflowClient, s
   
     train, test = matrix.randomSplit([0.8, 0.2], seed=s)
     train, train_features = format_matrix(train)
+    train.cache()
     test, _ = format_matrix(test)
-
+    test.cache()
     models = [DecisionTreeClassifier(labelCol='label', featuresCol='features'),
                 RandomForestClassifier(labelCol='label', featuresCol='features')]
 

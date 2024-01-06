@@ -49,7 +49,6 @@ def format_columns(matrix: DataFrame) -> DataFrame:
     matrix : pyspark.sql.DataFrame
         Matrix with the gathered data.
     """
-
     matrix = matrix.withColumn('aircraft id', matrix['aircraft id'].cast(StringType())) \
         .withColumn('date', matrix['date'].cast(StringType())) \
         .withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \
@@ -88,7 +87,7 @@ def join_dataframes(sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) 
             (sensor_data['aircraft id'] == kpis['aircraftid']) &
             (sensor_data['date'] == kpis['timeid'])
         ),
-        'inner').drop('aircraftid', 'timeid').cache()
+        'inner').drop('aircraftid', 'timeid')
     
     matrix = matrix.withColumn('date', col('date').cast('date'))
     labels = labels.withColumn('starttime', col('starttime').cast('date'))
@@ -99,12 +98,11 @@ def join_dataframes(sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) 
             (col('aircraft id') == col('aircraftregistration')) &
             (col('starttime').between(col('date'), date_add(col('date'), 7)))
         ),
-        'left').cache()
+        'left')
     
     matrix = matrix.withColumn('label', expr('CASE WHEN aircraftregistration IS NOT NULL THEN 1 ELSE 0 END'))
     matrix = matrix.drop('aircraftregistration', 'starttime')
     matrix = matrix.dropDuplicates(['aircraft id', 'date'])
-
     return format_columns(matrix)
 
 
@@ -271,14 +269,14 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
     if os.path.exists('./resources/matrix') and record is None:
         matrix = read_saved_matrix(spark)
     else:
-        print(f'{Fore.YELLOW}Extarcting sensor data...{Fore.RESET}')
-        sensor_data = extract_sensor_data(spark=spark, record=record).cache()
+        print(f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
+        sensor_data = extract_sensor_data(spark=spark, record=record)
         
-        print(f'{Fore.YELLOW}Extarcting KPIs data...{Fore.RESET}')
-        kpis = extract_dw_data(spark, dbw_properties, record).cache()
+        print(f'{Fore.YELLOW}Extracting KPIs data...{Fore.RESET}')
+        kpis = extract_dw_data(spark, dbw_properties, record)
 
-        print(f'{Fore.YELLOW}Extarcting maintenance labels...{Fore.RESET}')
-        labels = extract_labels(spark, amos_properties).cache()
+        print(f'{Fore.YELLOW}Extracting maintenance labels...{Fore.RESET}')
+        labels = extract_labels(spark, amos_properties)
 
         print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
         matrix = join_dataframes(sensor_data, kpis, labels)

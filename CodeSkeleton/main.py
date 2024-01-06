@@ -109,20 +109,20 @@ if __name__== '__main__':
 
     if stage == 'all' or stage == 'management':
         print('-'*50 + '\n' + f'{Fore.CYAN}Start of the Management Pipeline{Fore.RESET}')
-        matrix = managment_pipe(spark, dbw_properties, amos_properties)
+        matrix = managment_pipe(spark, dbw_properties, amos_properties).cache()
         print(f'{Fore.GREEN}End of the Management Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
     if stage != 'management':
         if stage == 'all' or stage == 'analysis':
             print(f'{Fore.CYAN}Start of the Analysis Pipeline{Fore.RESET}')
             if stage == 'analysis':
-                matrix = read_saved_pipelines(spark)
+                matrix = read_saved_pipelines(spark).cache()
             model, _ = analysis_pipe(matrix, experiment_id, client)
             print(f'{Fore.GREEN}End of the Analysis Pipeline{Fore.RESET}' + '\n' + '-'*50)
         
         print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
         if stage == 'classifier':
-            matrix, model = read_saved_pipelines(spark)
+            matrix, model = read_saved_pipelines(spark).cache()
         classifier_pipe(spark, model, dbw_properties)
         print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
