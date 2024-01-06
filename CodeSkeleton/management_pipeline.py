@@ -81,6 +81,11 @@ def join_dataframes(sensor_data: DataFrame, kpis: DataFrame, labels: DataFrame) 
         DataFrame with the average measurement per flight per day, the FH, FC and DM KPIs, and the label.
     """
     
+    # Repartition DataFrames before join
+    sensor_data = sensor_data.repartition(10, 'aircraft id', 'date')
+    kpis = kpis.repartition(10, 'aircraftid', 'timeid')
+    labels = labels.repartition(10, 'aircraft id')
+
     matrix = sensor_data.join(
         kpis,
         (
