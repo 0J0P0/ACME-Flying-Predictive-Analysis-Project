@@ -63,10 +63,13 @@ def log_classifier(experiment_id: str, classifier: PipelineModel, num_features: 
 
     name = classifier.__class__.__name__
 
+    max_depth = classifier._java_obj.getMaxDepth()
+    max_bins = classifier._java_obj.getMaxBins()
+
     with mlflow.start_run(experiment_id=experiment_id, run_name=name):
         mlflow.spark.log_model(classifier, 'model', registered_model_name=name)
         mlflow.log_metrics({'accuracy': metrics[0], 'recall': metrics[1]})
-        mlflow.log_params({'num_features': num_features})  # faltan hiperparámetros
+        mlflow.log_params({'num_features': num_features, 'max_depth': max_depth, 'max_bins': max_bins}) 
         mlflow.end_run()
 
 
