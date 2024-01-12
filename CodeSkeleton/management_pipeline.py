@@ -49,6 +49,7 @@ def format_columns(matrix: DataFrame) -> DataFrame:
     matrix : pyspark.sql.DataFrame
         Matrix with the gathered data.
     """
+    
     matrix = matrix.withColumn('aircraft id', matrix['aircraft id'].cast(StringType())) \
         .withColumn('date', matrix['date'].cast(StringType())) \
         .withColumn('avg_sensor', matrix['avg_sensor'].cast(DoubleType())) \

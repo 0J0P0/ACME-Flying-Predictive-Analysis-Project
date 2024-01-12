@@ -41,7 +41,23 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 
 
 def select_best_classifier(experiment_id: str, client: MlflowClient = None, experiment_name: str = None) -> PipelineModel:
-    """."""
+    """
+    Selects the best classifier from the MLflow experiment.
+
+    Parameters
+    ----------
+    experiment_id : str
+        ID of the MLflow experiment.
+    client : mlflow.tracking.MlflowClient, optional
+        MLflow client, by default None.
+    experiment_name : str, optional
+        Name of the MLflow experiment, by default None.
+
+    Returns
+    -------
+    best_model : pyspark.ml.PipelineModel
+        Best classifier.
+    """
 
     if client is not None:
         best_model_info = client.search_runs(experiment_id, order_by=["metrics.accuracy DESC"], max_results=1)[0]
@@ -56,9 +72,24 @@ def select_best_classifier(experiment_id: str, client: MlflowClient = None, expe
     return best_model
 
 
-def log_classifier(experiment_id: str, classifier: PipelineModel, num_features: int, metrics: tuple):
+def log_classifier(experiment_id: str, classifier: PipelineModel, num_features: int, metrics: tuple) -> None:
     """
-    .
+    Logs the metrics and saves the classifier.
+
+    Parameters
+    ----------
+    experiment_id : str
+        ID of the MLflow experiment.
+    classifier : pyspark.ml.PipelineModel
+        Trained classifier.
+    num_features : int
+        Number of features of the matrix.
+    metrics : tuple
+        Accuracy and recall of the classifier.
+
+    Returns
+    -------
+    None
     """
 
     name = classifier.__class__.__name__
@@ -73,9 +104,23 @@ def log_classifier(experiment_id: str, classifier: PipelineModel, num_features: 
         mlflow.end_run()
 
 
-def evaluate_classifier(classifier: PipelineModel, test: DataFrame):
+def evaluate_classifier(classifier: PipelineModel, test: DataFrame) -> tuple:
     """
-    ...
+    Evaluates the classifier. Returns the accuracy and recall.
+
+    Parameters
+    ----------
+    classifier : pyspark.ml.PipelineModel
+        Trained classifier.
+    test : pyspark.sql.DataFrame
+        DataFrame with the test data.
+
+    Returns
+    -------
+    acc : float
+        Accuracy of the classifier.
+    recall : float
+        Recall of the classifier.
     """
 
     evaluator1 = MulticlassClassificationEvaluator(labelCol='label',
@@ -93,9 +138,25 @@ def evaluate_classifier(classifier: PipelineModel, test: DataFrame):
     return (acc, recall)
 
 
-def train_model(data:DataFrame, models: list, k: int = 3, s: int = 69) -> list:
+def train_model(data: DataFrame, models: list, k: int = 3, s: int = 69) -> list:
     """
-    ---
+    Trains the classifiers, using cross validation.
+
+    Parameters
+    ----------
+    data : pyspark.sql.DataFrame
+        DataFrame with the training data.
+    models : list
+        List of classifiers.
+    k : int, optional
+        Number of folds, by default 3.
+    s : int, optional
+        Seed, by default 69.
+
+    Returns
+    -------
+    classifiers : list
+        List of trained classifiers.
     """
 
     classifiers = []

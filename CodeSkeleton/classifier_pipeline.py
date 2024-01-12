@@ -39,7 +39,7 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 ##############################################################################################################
 
 
-def format_record(record: DataFrame):
+def format_record(record: DataFrame) -> DataFrame:
     """
     Formats the record so it can be used by the model.
 
@@ -66,7 +66,7 @@ def format_record(record: DataFrame):
     return record.select('features')
 
 
-def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties: dict):
+def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties: dict) -> DataFrame:
     """
     Extracts the record from the available data.
 
@@ -117,7 +117,7 @@ def extract_record(spark: SparkSession, day: str, aircraft: str, dbw_properties:
     return format_record(record), False
 
 
-def valid_input(day: str, aircraft: str):
+def valid_input(day: str, aircraft: str) -> bool:
     """
     Checks if the input is valid. The input is valid if it has the following format:
     - day: YYYY-MM-DD
@@ -148,7 +148,7 @@ def valid_input(day: str, aircraft: str):
     return valid
 
 
-def classifier_pipe(spark: SparkSession, model, dbw_properties: dict):
+def classifier_pipe(spark: SparkSession, model, dbw_properties: dict) -> None:
     """
     Run-time classifier pipeline. Recieves multiple inputs of the form (aircraft, day) and makes if the aircraft is going for unscheduled maintenance or not.
 

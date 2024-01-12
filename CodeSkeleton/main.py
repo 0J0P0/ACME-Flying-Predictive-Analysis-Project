@@ -47,7 +47,17 @@ from management_pipeline import managment_pipe, read_saved_matrix
 
 def read_saved_pipelines(spark: SparkSession):
     """
-    .
+    Reads the saved pipelines from the resources folder.
+
+    Parameters
+    ----------
+    spark: SparkSession
+        The Spark session to be used.
+
+    Returns
+    -------
+    matrix: DataFrame
+        The matrix of the analysis pipeline.
     """
 
     if stage == 'analysis':
