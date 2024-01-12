@@ -1,8 +1,32 @@
+##############################################################################################################
+# Authors:      Enric Millan, Juan Pablo Zaldivar                                                            #
+#                                                                                                            #
+# Project:      Predictive Analysis Project - Classifier Pipeline                                            #
+#                                                                                                            #
+# Usage:        Called from main.py.                                                                         #
+##############################################################################################################
+
+"""
+This module accounts for extra functions for general use across the project. 
+"""
+
+##############################################################################################################
+#                                                                                                            #
+# Imports                                                                                                    #
+#                                                                                                            #
+##############################################################################################################
+
 import argparse
 from mlflow.tracking import MlflowClient
 
+##############################################################################################################
+#                                                                                                            #
+# Functions                                                                                                  #
+#                                                                                                            #
+##############################################################################################################
 
-def read_arguments():
+
+def read_arguments() -> tuple:
     """
     Reads the arguments passed to the script. If no arguments are passed, the default values are used. The required arguments are the database user and password.
 
@@ -59,7 +83,21 @@ def read_arguments():
 
 
 def create_or_load_experiment(client: MlflowClient, experiment_name: str) -> str:
-    """."""
+    """
+    Creates or loads an experiment in MLflow. If the experiment already exists, it is loaded.
+
+    Parameters
+    ----------
+    client : MlflowClient
+        MLflow client.
+    experiment_name : str
+        Name of the experiment.
+
+    Returns
+    -------
+    experiment_id : str
+        Experiment ID.
+    """
 
     experiment_description = (
         "Predictive Analysis Project - Analysis Pipeline"
