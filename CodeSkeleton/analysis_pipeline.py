@@ -40,7 +40,7 @@ from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassi
 ##############################################################################################################
 
 
-def select_best_classifier(experiment_id: str, client: MlflowClient = None, experiment_name: str = None) -> PipelineModel:
+def select_best_classifier(experiment_id: str, client: MlflowClient = None, experiment_name: str = None, idx: int = 0) -> PipelineModel:
     """
     Selects the best classifier from the MLflow experiment.
 
@@ -52,6 +52,8 @@ def select_best_classifier(experiment_id: str, client: MlflowClient = None, expe
         MLflow client, by default None.
     experiment_name : str, optional
         Name of the MLflow experiment, by default None.
+    idx : int, optional
+        Index of the best classifier, by default 0.
 
     Returns
     -------
@@ -60,13 +62,13 @@ def select_best_classifier(experiment_id: str, client: MlflowClient = None, expe
     """
 
     if client is not None:
-        best_model_info = client.search_runs(experiment_id, order_by=["metrics.accuracy DESC"], max_results=1)[0]
+        best_model_info = client.search_runs(experiment_id, order_by=["metrics.accuracy DESC"], max_results=2)[idx]
         best_model = mlflow.spark.load_model(best_model_info.info.artifact_uri + "/model")
     else:  # Runtime model selection
         client = MlflowClient()
         experiment = client.get_experiment_by_name(experiment_name)
-        runs = client.search_runs(experiment.experiment_id, order_by=["metrics.accuracy DESC"], max_results=1)
-        best_run = runs[0]
+        runs = client.search_runs(experiment.experiment_id, order_by=["metrics.accuracy DESC"], max_results=2)
+        best_run = runs[idx]
         best_model = mlflow.spark.load_model(best_run.info.artifact_uri + "/model")
     
     return best_model

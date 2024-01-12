@@ -26,6 +26,31 @@ from mlflow.tracking import MlflowClient
 ##############################################################################################################
 
 
+def get_model_idx(model: str) -> int:
+    """
+    Gets the index of the model to use.
+
+    Parameters
+    ----------
+    model : str
+        Model to use.
+
+    Returns
+    -------
+    model_idx : int
+        Index of the model to use.
+    """
+
+    if model == 'DecisionTree':
+        model_idx = 0
+    elif model == 'RandomForest':
+        model_idx = 1
+    else:
+        model_idx = 0
+    
+    return model_idx
+
+
 def read_arguments() -> tuple:
     """
     Reads the arguments passed to the script. If no arguments are passed, the default values are used. The required arguments are the database user and password.
@@ -40,7 +65,7 @@ def read_arguments() -> tuple:
         Python version to use.
     stage : str
         Stage to run.
-    model : str
+    model : int
         Model to use.
 
     Raises
@@ -79,7 +104,7 @@ def read_arguments() -> tuple:
 
     args = parser.parse_args()
 
-    return args.DBuser, args.DBpassword, args.python_version, args.stage, args.model
+    return args.DBuser, args.DBpassword, args.python_version, args.stage, get_model_idx(args.model)
 
 
 def create_or_load_experiment(client: MlflowClient, experiment_name: str) -> str:

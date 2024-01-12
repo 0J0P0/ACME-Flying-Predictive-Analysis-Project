@@ -41,11 +41,11 @@ from management_pipeline import managment_pipe, read_saved_matrix
 
 ##############################################################################################################
 #                                                                                                            #
-# Variables                                                                                                  #
+# Functions                                                                                                  #
 #                                                                                                            #
 ##############################################################################################################
 
-def read_saved_pipelines(spark: SparkSession):
+def read_saved_pipelines(spark: SparkSession, model_idx: int = None):
     """
     Reads the saved pipelines from the resources folder.
 
@@ -53,6 +53,8 @@ def read_saved_pipelines(spark: SparkSession):
     ----------
     spark: SparkSession
         The Spark session to be used.
+    model_idx: int
+        The index of the model to be used.
 
     Returns
     -------
@@ -69,7 +71,7 @@ def read_saved_pipelines(spark: SparkSession):
 
     if stage == 'classifier':
         try:
-            return read_saved_matrix(spark), select_best_classifier(experiment_id=experiment_id, experiment_name=experiment_name)
+            return read_saved_matrix(spark), select_best_classifier(experiment_id=experiment_id, experiment_name=experiment_name, idx=model_idx)
         except Exception as e:
             print(f'{Fore.RED}Error reading the matrix and/or the model from the resources folder. Try executing the management and analysis pipelines first: {e}{Fore.RESET}')
             sys.exit(1)
@@ -82,7 +84,7 @@ def read_saved_pipelines(spark: SparkSession):
 ##############################################################################################################
 
 if __name__== '__main__':
-    user, password, python_version, stage, model_name = read_arguments()
+    user, password, python_version, stage, model_idx = read_arguments()
     
     HADOOP_HOME = './resources/hadoop_home'
     JDBC_JAR = './resources/postgresql-42.2.8.jar'
@@ -132,7 +134,7 @@ if __name__== '__main__':
         
         print(f'{Fore.CYAN}Start of the Classifier Pipeline{Fore.RESET}')
         if stage == 'classifier':
-            matrix, model = read_saved_pipelines(spark).cache()
+            matrix, model = read_saved_pipelines(spark, model_idx)
         classifier_pipe(spark, model, dbw_properties)
         print(f'{Fore.GREEN}End of the Classifier Pipeline{Fore.RESET}' + '\n' + '-'*50)
 
