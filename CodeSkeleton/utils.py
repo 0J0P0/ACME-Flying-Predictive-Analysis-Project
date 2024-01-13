@@ -125,7 +125,7 @@ def create_or_load_experiment(client: MlflowClient, experiment_name: str) -> str
     """
 
     experiment_description = (
-        "Predictive Analysis Project - Analysis Pipeline"
+        "Predictive Analysis Project"
     )
 
     experiment_tags = {

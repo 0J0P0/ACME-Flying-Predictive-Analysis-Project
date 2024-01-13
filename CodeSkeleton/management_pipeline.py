@@ -35,6 +35,26 @@ from pyspark.sql.functions import avg, lit, to_date, col, substring, expr, date_
 #                                                                                                            #
 ##############################################################################################################
 
+
+def read_saved_matrix(spark: SparkSession) -> DataFrame:
+    """
+    Reads the matrix from the resources folder and returns a DataFrame with the gathered data.
+
+    Parameters
+    ----------
+    spark : SparkSession
+        SparkSession object.
+
+    Returns
+    -------
+    matrix : pyspark.sql.DataFrame
+        Matrix with the gathered data.
+    """
+
+    matrix = spark.read.csv('./resources/matrix', header=True)
+    return format_columns(matrix)
+
+
 def format_columns(matrix: DataFrame) -> DataFrame:
     """
     Formats the matrix so that the columns are the aircraft id, day, FH, FC and DM KPIs, and the average measurement of the 3453 sensor, and the label.
@@ -223,25 +243,6 @@ def extract_sensor_data(spark: SparkSession, filepath: str = './resources/traini
     return sensors
 
 
-def read_saved_matrix(spark: SparkSession) -> DataFrame:
-    """
-    Reads the matrix from the resources folder and returns a DataFrame with the gathered data.
-
-    Parameters
-    ----------
-    spark : SparkSession
-        SparkSession object.
-
-    Returns
-    -------
-    matrix : pyspark.sql.DataFrame
-        Matrix with the gathered data.
-    """
-
-    matrix = spark.read.csv('./resources/matrix', header=True)
-    return format_columns(matrix)
-
-
 def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: dict, record: tuple = None, save: bool = True) -> DataFrame:
     """
     Managment Pipeline. This pipeline generates a matrix where the rows denote the information of an aircraft per day, and the columns refer to the FH, FC and DM KPIs, and the average measurement of the 3453 sensor. 
@@ -267,23 +268,24 @@ def managment_pipe(spark: SparkSession, dbw_properties: dict, amos_properties: d
         Matrix with the gathered data.
     """
     
-    if os.path.exists('./resources/matrix') and record is None:
-        matrix = read_saved_matrix(spark).cache()
-    else:
-        print(f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
-        sensor_data = extract_sensor_data(spark=spark, record=record)
-        
-        print(f'{Fore.YELLOW}Extracting KPIs data...{Fore.RESET}')
-        kpis = extract_dw_data(spark, dbw_properties, record)
+    # if the matrix already exists, delete it
+    if os.path.exists('./resources/matrix'):
+        os.remove('./resources/matrix')
 
-        print(f'{Fore.YELLOW}Extracting maintenance labels...{Fore.RESET}')
-        labels = extract_labels(spark, amos_properties)
+    print(f'{Fore.YELLOW}Extracting sensor data...{Fore.RESET}')
+    sensor_data = extract_sensor_data(spark=spark, record=record)
+    
+    print(f'{Fore.YELLOW}Extracting KPIs data...{Fore.RESET}')
+    kpis = extract_dw_data(spark, dbw_properties, record)
 
-        print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
-        matrix = join_dataframes(sensor_data, kpis, labels).cache()
+    print(f'{Fore.YELLOW}Extracting maintenance labels...{Fore.RESET}')
+    labels = extract_labels(spark, amos_properties)
 
-        if save and record is None:
-            print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
-            matrix.write.csv('./resources/matrix', header=True)
+    print(f'{Fore.YELLOW}Joining dataframes...{Fore.RESET}')
+    matrix = join_dataframes(sensor_data, kpis, labels).cache()
+
+    if save and record is None:
+        print(f'{Fore.YELLOW}Storing matrix...{Fore.RESET}')
+        matrix.write.csv('./resources/matrix', header=True)
 
     return matrix

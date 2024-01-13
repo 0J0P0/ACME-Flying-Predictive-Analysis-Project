@@ -175,6 +175,7 @@ def classifier_pipe(spark: SparkSession, model, dbw_properties: dict) -> None:
                 record, empty = extract_record(spark, day, aircraft, dbw_properties)
 
                 if not empty:
+                    print(f'{Fore.YELLOW}Making prediction with {model.__class__.__name__}...{Fore.RESET}')
                     prediction = model.transform(record)
                     pred = prediction.select("prediction").first()[0]
                     if pred == 0.0:
@@ -185,5 +186,5 @@ def classifier_pipe(spark: SparkSession, model, dbw_properties: dict) -> None:
             except Exception as e:
                 print(f'{Fore.RED}Error in aircraft {aircraft} on day {day}. {e}{Fore.RESET}')
 
-        day = input('Enter a day (YYYY-MM-DD): ')
-        aircraft = input('Enter an aircraft (XX-XXX): ')
+        day = input('Enter a day (YYYY-MM-DD) or "exit" to end: ')
+        aircraft = input('Enter an aircraft (XX-XXX) or "exit" to end: ')
